@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'tracking_screen.dart';
 import 'splash_screen.dart';
+import 'app_state.dart';
 
 class BookingScreen extends StatefulWidget {
   final Map<String, dynamic> provider;
@@ -85,6 +86,17 @@ class _BookingScreenState extends State<BookingScreen>
       _confirming = false;
       _confirmed = true;
     });
+    AppState.bookings.insert(
+      0,
+      BookingItem(
+        providerName: widget.provider['name'] ?? 'Provider',
+        service: widget.extracted['service'] ?? 'Service',
+        city: widget.extracted['location'] ?? widget.userCity,
+        time: DateTime.now(),
+        price: 2200,
+        providerData: widget.provider,
+      ),
+    );
     _confirmCtrl.forward();
     HapticFeedback.heavyImpact();
   }

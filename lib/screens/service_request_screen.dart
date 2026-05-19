@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'provider_screen.dart';
+import 'provider_screen.dart' hide PrismLogoPainter;
 import 'splash_screen.dart';
 import '../services/ai_engine.dart';
+import '../services/gemini_service.dart';
 
 class ServiceRequestScreen extends StatefulWidget {
   final String userName;
@@ -128,19 +129,99 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
     });
     _resultCtrl.reset();
 
-    // Simulate processing delay for UX
-    await Future.delayed(const Duration(milliseconds: 2400));
+    try {
+      // Gemini API call
+      final geminiResult = await GeminiService.parseRequest(
+        _controller.text,
+        widget.userCity,
+      );
 
-    // Use REAL AI engine
-    final result = AiEngine.parseRequest(_controller.text, widget.userCity);
+      // Local engine for provider filtering + edge-case metadata
+      final localResult = AiEngine.parseRequest(
+        _controller.text,
+        widget.userCity,
+      );
 
-    setState(() {
-      _analyzing = false;
-      _showResult = true;
-      parsedRequest = result;
-      _extracted = result.toExtractedMap();
-    });
-    _resultCtrl.forward();
+      // Derive city/service from merged result for validation flags
+      final mergedService = geminiResult['service'] ?? localResult.service;
+      final mergedCity = geminiResult['city'] ?? localResult.city;
+
+      // Merge results — all required fields supplied
+      final updatedParsed = ParsedRequest(
+        service: mergedService,
+        city: mergedCity,
+        rawLocation: geminiResult['location'] ?? localResult.rawLocation,
+        urgency: geminiResult['urgency'] ?? localResult.urgency,
+        preferredTime: geminiResult['time'] ?? localResult.preferredTime,
+        budget: _parseBudget(geminiResult['budget'] ?? 'Medium'),
+        confidenceScore:
+            geminiResult['confidence'] ?? localResult.confidenceScore,
+        confidenceLevel: localResult.confidenceLevel,
+        agentLog: List<String>.from(
+          geminiResult['agentLog'] ?? localResult.agentLog,
+        ),
+        // Required edge-case fields — derive from local engine which already validated
+        isEmptyRequest: localResult.isEmptyRequest,
+        isCitySupported: localResult.isCitySupported,
+        isServiceRecognised: localResult.isServiceRecognised,
+        failureReason: localResult.failureReason,
+        confidenceWarning: localResult.confidenceWarning,
+        retrySuggestions: localResult.retrySuggestions,
+      );
+
+      final mergedExtracted = {
+        'service': updatedParsed.service,
+        'city': updatedParsed.city,
+        'location': updatedParsed.rawLocation,
+        'time': updatedParsed.preferredTime,
+        'urgency': updatedParsed.urgency,
+        'budget': _budgetLabel(updatedParsed.budget),
+        'confidence': updatedParsed.confidenceScore,
+      };
+
+      setState(() {
+        _analyzing = false;
+        _showResult = true;
+        parsedRequest = updatedParsed;
+        _extracted = mergedExtracted;
+      });
+      _resultCtrl.forward();
+    } catch (e) {
+      // Full fallback to local engine
+      final localResult = AiEngine.parseRequest(
+        _controller.text,
+        widget.userCity,
+      );
+      setState(() {
+        _analyzing = false;
+        _showResult = true;
+        parsedRequest = localResult;
+        _extracted = localResult.toExtractedMap();
+      });
+      _resultCtrl.forward();
+    }
+  }
+
+  String _parseBudget(String budget) {
+    switch (budget.toLowerCase()) {
+      case 'low':
+        return 'Low';
+      case 'high':
+        return 'High';
+      default:
+        return 'Medium';
+    }
+  }
+
+  String _budgetLabel(String budget) {
+    switch (budget) {
+      case 'Low':
+        return 'Low (Budget Sensitive)';
+      case 'High':
+        return 'High (Quality First)';
+      default:
+        return 'Medium Sensitivity';
+    }
   }
 
   void _goToProviders() {
@@ -172,6 +253,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
         ),
         title: Row(
           children: [
+            // Use splash_screen's painter to avoid the duplicate-class conflict
             SizedBox(
               width: 24,
               height: 28,
@@ -375,7 +457,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
             children: [
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, _) => Container(
+                builder: (_, __) => Container(
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
@@ -387,7 +469,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
               const SizedBox(width: 6),
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, _) => Container(
+                builder: (_, __) => Container(
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
@@ -401,7 +483,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
               const SizedBox(width: 6),
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, _) => Container(
+                builder: (_, __) => Container(
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
@@ -438,7 +520,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
         children: [
           AnimatedBuilder(
             animation: _pulseCtrl,
-            builder: (_, _) => Icon(
+            builder: (_, __) => Icon(
               done
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_unchecked_rounded,
@@ -606,7 +688,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
 
                   const SizedBox(height: 18),
 
-                  // REAL agent reasoning logs from AiEngine
+                  // Agent reasoning log
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -626,7 +708,6 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Real logs from parsedRequest
                         if (parsedRequest != null)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

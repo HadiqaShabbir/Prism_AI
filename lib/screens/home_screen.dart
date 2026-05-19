@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'splash_screen.dart';
 import 'agent_dashboard_screen.dart';
+import '../services/gemini_service.dart';
+import 'service_request_screen.dart';
+import 'app_state.dart';
 
 class PrismHomeScreen extends StatefulWidget {
   final String userName;
@@ -197,7 +200,21 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
       _bookingDone = false;
     });
     _cardCtrl.reset();
-    await Future.delayed(const Duration(milliseconds: 2200));
+
+    // Real Gemini API call
+    final geminiResult = await GeminiService.parseRequest(
+      _requestController.text,
+      widget.userCity,
+    );
+
+    // Update AI understanding card with real data
+    _aiUnderstanding['service'] = geminiResult['service'] ?? 'General Service';
+    _aiUnderstanding['location'] = geminiResult['location'] ?? widget.userCity;
+    _aiUnderstanding['urgency'] = geminiResult['urgency'] ?? 'Medium';
+    _aiUnderstanding['time'] = geminiResult['time'] ?? 'Flexible';
+    _aiUnderstanding['budget'] = geminiResult['budget'] ?? 'Medium';
+    _aiUnderstanding['confidence'] = geminiResult['confidence'] ?? 75;
+
     setState(() {
       _aiThinking = false;
       _showAiCard = true;
@@ -207,10 +224,14 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     setState(() => _showProviders = true);
     await Future.delayed(const Duration(milliseconds: 300));
     setState(() => _showPricing = true);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AgentDashboardScreen()),
-    );
+  }
+
+  String _currentTime() {
+    final now = DateTime.now();
+    final h = now.hour.toString().padLeft(2, '0');
+    final m = now.minute.toString().padLeft(2, '0');
+    final s = now.second.toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 
   void _bookNow() {
@@ -714,9 +735,9 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             ),
           ),
           const SizedBox(height: 12),
+
           Row(
             children: [
-              // Mic button
               Container(
                 width: 48,
                 height: 48,
@@ -727,30 +748,39 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                 ),
                 child: const Icon(Icons.mic_rounded, color: kBlue, size: 22),
               ),
+
               const SizedBox(width: 10),
-              // Send button
+
               Expanded(
                 child: SizedBox(
                   height: 48,
                   child: ElevatedButton(
                     onPressed: _aiThinking ? null : _submitRequest,
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kBlue,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: kBlue.withOpacity(0.5),
+
                       elevation: 6,
                       shadowColor: kBlue.withOpacity(0.35),
+
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: Row(
+
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+
+                      children: [
                         Icon(Icons.send_rounded, size: 18),
+
                         SizedBox(width: 8),
+
                         Text(
                           'Find Service',
+
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
@@ -762,6 +792,54 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 8),
+
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+
+                  MaterialPageRoute(
+                    builder: (_) => ServiceRequestScreen(
+                      userName: widget.userName,
+                      userCity: widget.userCity,
+                    ),
+                  ),
+                );
+              },
+
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kBlue,
+
+                side: const BorderSide(color: kBorder),
+
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+
+                children: [
+                  Icon(Icons.tune_rounded, size: 16),
+
+                  SizedBox(width: 8),
+
+                  Text(
+                    'Advanced Request',
+
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -783,7 +861,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         children: [
           AnimatedBuilder(
             animation: _pulseCtrl,
-            builder: (_, _) => Container(
+            builder: (context, child) => Container(
               width: 10,
               height: 10,
               decoration: BoxDecoration(
@@ -795,7 +873,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
           const SizedBox(width: 6),
           AnimatedBuilder(
             animation: _pulseCtrl,
-            builder: (_, _) => Container(
+            builder: (context, child) => Container(
               width: 8,
               height: 8,
               decoration: BoxDecoration(
@@ -807,7 +885,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
           const SizedBox(width: 6),
           AnimatedBuilder(
             animation: _pulseCtrl,
-            builder: (_, _) => Container(
+            builder: (context, child) => Container(
               width: 7,
               height: 7,
               decoration: BoxDecoration(
@@ -1416,32 +1494,30 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         children: [
           _tabHeader('My Bookings', Icons.calendar_today_rounded),
           Expanded(
-            child: _bookingDone
-                ? ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      _ActiveBookingCard(),
-                      const SizedBox(height: 12),
-                      _PastBookingCard(
-                        service: 'Plumbing Fix',
-                        provider: 'Rana Plumbers',
-                        date: 'May 10, 2026',
-                        status: 'Completed',
-                        rating: 4.5,
-                      ),
-                      _PastBookingCard(
-                        service: 'Electrician',
-                        provider: 'Waqas Electric',
-                        date: 'April 28, 2026',
-                        status: 'Completed',
-                        rating: 5.0,
-                      ),
-                    ],
-                  )
-                : _emptyState(
+            child: AppState.bookings.isEmpty
+                ? _emptyState(
                     Icons.calendar_today_rounded,
                     'No bookings yet',
                     'Submit a service request on the Home tab to get started.',
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: AppState.bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = AppState.bookings[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _PastBookingCard(
+                          service: booking.service,
+                          provider: booking.providerName,
+                          date:
+                              '${booking.time.day}/${booking.time.month}/${booking.time.year}',
+                          status: 'Confirmed',
+                          rating: 5.0,
+                        ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -1460,7 +1536,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Intent Extraction',
         detail:
             'Input: "Mujhe kal morning mein AC technician chahiye G-13 mein"\nDetected: Roman Urdu + English mix\nConfidence: 92%',
-        timestamp: '10:42:01',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1470,7 +1546,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Field Extraction',
         detail:
             'service=AC Repair · location=G-13 · time=tomorrow morning · urgency=HIGH · budget_sensitivity=MEDIUM',
-        timestamp: '10:42:02',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1480,7 +1556,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Mock Dataset Query',
         detail:
             'Query: AC technicians near G-13, Islamabad\nResult: 3 providers found\nFilters applied: availability=true, rating≥4.0',
-        timestamp: '10:42:03',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1490,7 +1566,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Multi-Factor Ranking',
         detail:
             'Factors: distance(20%) + rating(25%) + on-time(20%) + specialization(20%) + price(15%)\nWinner: Ali AC Services\nReason: Higher reliability despite not being nearest',
-        timestamp: '10:42:04',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1500,7 +1576,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Dynamic Quote',
         detail:
             'Base: 1800 + Distance(300) + Urgency(200) – Loyalty(100) = Rs 2,200\nFairness check: ✓ Provider rate within market bounds',
-        timestamp: '10:42:05',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1510,7 +1586,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Slot Reservation',
         detail:
             'Slot: Tomorrow 10:00 AM\nDouble-booking check: ✓ Clear\nTravel buffer: 20 min added\nCalendar updated: ✓',
-        timestamp: '10:42:06',
+        timestamp: _currentTime(),
         success: true,
       ),
       _TraceLog(
@@ -1520,7 +1596,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         action: 'Confirmation Dispatch',
         detail:
             'SMS/WhatsApp: Simulated ✓\nBooking ID: #PRZ-2024-001\nProvider notified: ✓\nReminder scheduled: T-60min ✓',
-        timestamp: '10:42:07',
+        timestamp: _currentTime(),
         success: true,
       ),
     ];
@@ -2079,7 +2155,31 @@ class _ProviderCardState extends State<_ProviderCard> {
                         width: double.infinity,
                         height: 42,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            AppState.bookings.insert(
+                              0,
+                              BookingItem(
+                                providerName: p['name'] ?? 'Provider',
+                                service: 'Home Service',
+                                city: 'Your City',
+                                time: DateTime.now(),
+                                price: p['price'] ?? 0,
+                                providerData: p,
+                              ),
+                            );
+
+                            setState(() {});
+
+                            showDialog(
+                              context: context,
+                              builder: (_) => _BookingSuccessDialog(
+                                onDone: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            );
+                          },
+
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kBlue,
                             foregroundColor: Colors.white,

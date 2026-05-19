@@ -17,7 +17,7 @@ class DisputeScreen extends StatefulWidget {
   const DisputeScreen({
     super.key,
     this.provider,
-    this.bookingId = '#PRZ-2026-001',
+    this.bookingId = '#PRZ-2026-001', required String service,
   });
 
   @override
