@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'tracking_screen.dart';
 import 'splash_screen.dart';
-import 'app_state.dart';
+import '../services/booking_manager.dart';
 
 class BookingScreen extends StatefulWidget {
   final Map<String, dynamic> provider;
@@ -80,24 +80,34 @@ class _BookingScreenState extends State<BookingScreen>
 
   Future<void> _confirmBooking() async {
     HapticFeedback.mediumImpact();
+
     setState(() => _confirming = true);
+
     await Future.delayed(const Duration(milliseconds: 2000));
+
+    final manager = BookingManager();
+
+    final booking = BookingModel(
+      bookingId: manager.generateBookingId(),
+      providerName: widget.provider['name'] ?? 'Provider',
+      service: widget.extracted['service'] ?? 'Service',
+      city: widget.extracted['location'] ?? widget.userCity,
+      slot: _selectedSlot,
+      price: 2200,
+      paymentMethod: _selectedPayment,
+      status: 'Confirmed',
+      timestamp: DateTime.now(),
+    );
+
+    manager.addBooking(booking);
+
     setState(() {
       _confirming = false;
       _confirmed = true;
     });
-    AppState.bookings.insert(
-      0,
-      BookingItem(
-        providerName: widget.provider['name'] ?? 'Provider',
-        service: widget.extracted['service'] ?? 'Service',
-        city: widget.extracted['location'] ?? widget.userCity,
-        time: DateTime.now(),
-        price: 2200,
-        providerData: widget.provider,
-      ),
-    );
+
     _confirmCtrl.forward();
+
     HapticFeedback.heavyImpact();
   }
 

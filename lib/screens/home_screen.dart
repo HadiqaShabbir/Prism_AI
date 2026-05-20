@@ -1,10 +1,22 @@
+// ============================================================
+// lib/screens/home_screen.dart
+// PRISM AI — Home Screen  v4 (clean single-flow architecture)
+//
+// Changes from v3:
+//  • Removed all fake/hardcoded "Find Service" booking logic
+//  • Home tab now shows a clean launcher card → Advanced Search
+//  • Real bookings from BookingManager shown in Bookings tab
+//  • Welcome card stats pulled from BookingManager live
+//  • No duplicate flows — ONE booking path only (Advanced Search)
+//  • All animations/theme/design preserved
+// ============================================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'splash_screen.dart';
-import 'agent_dashboard_screen.dart';
 import '../services/gemini_service.dart';
 import 'service_request_screen.dart';
-import 'app_state.dart';
+import '../services/booking_manager.dart';
 
 class PrismHomeScreen extends StatefulWidget {
   final String userName;
@@ -21,7 +33,7 @@ class PrismHomeScreen extends StatefulWidget {
 
 class _PrismHomeScreenState extends State<PrismHomeScreen>
     with TickerProviderStateMixin {
-  // ── Colors ──────────────────────────────────────────────────
+  // ── Palette ──────────────────────────────────────────────────
   static const kNavy = Color(0xFF0A1628);
   static const kBlue = Color(0xFF185FA5);
   static const kCyan = Color(0xFF00C2D4);
@@ -30,23 +42,15 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
   static const kBorder = Color(0xFFD8E6F5);
   static const kText = Color(0xFF1A1A2E);
   static const kMuted = Color(0xFF6B7A8D);
+  static const kGreen = Color(0xFF4CAF50);
 
   // ── State ────────────────────────────────────────────────────
   int _navIndex = 0;
-  final _requestController = TextEditingController();
-  bool _aiThinking = false;
-  bool _showAiCard = false;
-  bool _showProviders = false;
-  bool _showPricing = false;
-  bool _bookingDone = false;
 
-  // ── Animation controllers ────────────────────────────────────
+  // ── Animations ───────────────────────────────────────────────
   late AnimationController _pulseCtrl;
-  late AnimationController _cardCtrl;
-  late Animation<double> _cardFade;
-  late Animation<Offset> _cardSlide;
 
-  // ── Mock data ────────────────────────────────────────────────
+  // ── Category quick-launch data ────────────────────────────────
   final List<Map<String, dynamic>> _categories = [
     {
       'icon': Icons.ac_unit_rounded,
@@ -90,77 +94,78 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     },
   ];
 
-  final _aiUnderstanding = {
-    'service': 'AC Repair',
-    'location': 'G-13, Islamabad',
-    'urgency': 'High',
-    'time': 'Tomorrow Morning',
-    'budget': 'Medium Sensitivity',
-    'confidence': 92,
-  };
-
-  final List<Map<String, dynamic>> _providers = [
-    {
-      'name': 'Ali AC Services',
-      'rating': 4.8,
-      'reviews': 124,
-      'distance': '2.1 km',
-      'onTime': 96,
-      'price': 2500,
-      'available': '10:00 AM',
-      'badge': 'Top Pick',
-      'badgeColor': Color(0xFF185FA5),
-      'reasons': [
-        'Specialized in AC repair',
-        'High reliability score',
-        'Low cancellation rate',
-        'Fits your budget',
-      ],
-    },
-    {
-      'name': 'CoolTech Solutions',
-      'rating': 4.6,
-      'reviews': 89,
-      'distance': '3.4 km',
-      'onTime': 91,
-      'price': 2200,
-      'available': '11:00 AM',
-      'badge': 'Budget Friendly',
-      'badgeColor': Color(0xFF00C2D4),
-      'reasons': [
-        'Lower price point',
-        'Good recent reviews',
-        'Available earlier',
-        'Certified technician',
-      ],
-    },
-    {
-      'name': 'AirFlow Experts',
-      'rating': 4.5,
-      'reviews': 67,
-      'distance': '1.8 km',
-      'onTime': 88,
-      'price': 2800,
-      'available': '12:00 PM',
-      'badge': 'Nearest',
-      'badgeColor': Color(0xFF6C4FD6),
-      'reasons': [
-        'Closest to location',
-        'Premium service quality',
-        'Senior technician',
-        'Same-day availability',
-      ],
-    },
-  ];
-
-  final _bookingTimeline = [
-    {'label': 'Request Received', 'done': true},
-    {'label': 'AI Analysis Complete', 'done': true},
-    {'label': 'Provider Matched', 'done': true},
-    {'label': 'Booking Confirmed', 'done': false},
-    {'label': 'Technician En Route', 'done': false},
-    {'label': 'Service In Progress', 'done': false},
-    {'label': 'Feedback Pending', 'done': false},
+  // ── AI Trace logs (static showcase) ──────────────────────────
+  final List<_TraceLog> _traceLogs = const [
+    _TraceLog(
+      agent: 'Gemini Orchestrator',
+      icon: Icons.hub_rounded,
+      color: Color(0xFF6C4FD6),
+      action: 'Request Received',
+      detail:
+          '[Gemini Orchestrator] Request received\n[Gemini Orchestrator] Analyzing intent via gemini-2.5-flash\n[Gemini Orchestrator] Routing to Language Parser Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Language Parser Agent',
+      icon: Icons.translate_rounded,
+      color: Color(0xFF00C2D4),
+      action: 'Intent Extraction',
+      detail:
+          '[Language Parser] Input classified: Roman Urdu + English mix\n[Language Parser] Confidence: 94%\n[Gemini Orchestrator] Routing to Entity Extractor Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Entity Extractor Agent',
+      icon: Icons.data_object_rounded,
+      color: Color(0xFF185FA5),
+      action: 'Field Extraction',
+      detail:
+          '[Entity Extractor] service=AC Repair\n[Entity Extractor] location=DHA → city=Karachi\n[Entity Extractor] urgency=HIGH  time=Tomorrow Morning\n[Gemini Orchestrator] Routing to Provider Discovery Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Provider Discovery Agent',
+      icon: Icons.search_rounded,
+      color: Color(0xFF185FA5),
+      action: 'Dataset Query',
+      detail:
+          '[Provider Discovery] Querying mock dataset\n[Provider Discovery] City filter: Karachi\n[Provider Discovery] Service filter: AC Repair\n[Provider Discovery] 3 providers found\n[Gemini Orchestrator] Routing to Ranking Engine Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Ranking Engine Agent',
+      icon: Icons.leaderboard_rounded,
+      color: Color(0xFFFF7043),
+      action: 'Multi-Factor Ranking',
+      detail:
+          '[Ranking Engine] Rating(25%) + Reliability(20%) + Distance(20%) + OnTime(15%) + Price(10%) + CancelRate(10%)\n[Ranking Engine] Top pick: Ali AC Services — Score: 94%\n[Ranking Engine] Reason: Highest reliability + AC specialist\n[Gemini Orchestrator] Routing to Pricing Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Pricing Engine Agent',
+      icon: Icons.price_change_rounded,
+      color: Color(0xFF66BB6A),
+      action: 'Dynamic Quote',
+      detail:
+          '[Pricing Engine] Base: Rs 1800\n[Pricing Engine] Distance(2.1km): +Rs 300\n[Pricing Engine] Urgency(High): +Rs 200\n[Pricing Engine] Loyalty: -Rs 100\n[Pricing Engine] Final: Rs 2,200\n[Gemini Orchestrator] Routing to Booking Agent',
+      timestamp: '—',
+      success: true,
+    ),
+    _TraceLog(
+      agent: 'Booking Agent',
+      icon: Icons.receipt_rounded,
+      color: Color(0xFF185FA5),
+      action: 'Confirmation Dispatch',
+      detail:
+          '[Booking Agent] Slot confirmed: Tomorrow 10:00 AM\n[Booking Agent] Booking ID: #PRZ-2024-001\n[Booking Agent] Provider notified (simulated)\n[Booking Agent] Reminder scheduled: T-60min\n[Gemini Orchestrator] Workflow complete',
+      timestamp: '—',
+      success: true,
+    ),
   ];
 
   @override
@@ -170,89 +175,64 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _cardCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _cardFade = CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut);
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut));
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    _cardCtrl.dispose();
-    _requestController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitRequest() async {
-    if (_requestController.text.trim().isEmpty) return;
-    HapticFeedback.lightImpact();
-    setState(() {
-      _aiThinking = true;
-      _showAiCard = false;
-      _showProviders = false;
-      _showPricing = false;
-      _bookingDone = false;
+  // ── Navigate to Advanced Search (the ONE booking flow) ────────
+  void _goToAdvancedSearch({String prefill = ''}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ServiceRequestScreen(
+          userName: widget.userName,
+          userCity: widget.userCity,
+        ),
+      ),
+    ).then((_) {
+      // Refresh UI when returning so booking counts update
+      if (mounted) setState(() {});
     });
-    _cardCtrl.reset();
+  }
 
-    // Real Gemini API call
-    final geminiResult = await GeminiService.parseRequest(
-      _requestController.text,
-      widget.userCity,
-    );
+  void _categoryTap(String label) => _goToAdvancedSearch(
+    prefill: 'I need a $label service in ${widget.userCity}',
+  );
 
-    // Update AI understanding card with real data
-    _aiUnderstanding['service'] = geminiResult['service'] ?? 'General Service';
-    _aiUnderstanding['location'] = geminiResult['location'] ?? widget.userCity;
-    _aiUnderstanding['urgency'] = geminiResult['urgency'] ?? 'Medium';
-    _aiUnderstanding['time'] = geminiResult['time'] ?? 'Flexible';
-    _aiUnderstanding['budget'] = geminiResult['budget'] ?? 'Medium';
-    _aiUnderstanding['confidence'] = geminiResult['confidence'] ?? 75;
-
-    setState(() {
-      _aiThinking = false;
-      _showAiCard = true;
-    });
-    _cardCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 400));
-    setState(() => _showProviders = true);
-    await Future.delayed(const Duration(milliseconds: 300));
-    setState(() => _showPricing = true);
+  String _formatDate(DateTime dt) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return '${days[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
   }
 
   String _currentTime() {
-    final now = DateTime.now();
-    final h = now.hour.toString().padLeft(2, '0');
-    final m = now.minute.toString().padLeft(2, '0');
-    final s = now.second.toString().padLeft(2, '0');
-    return '$h:$m:$s';
-  }
-
-  void _bookNow() {
-    HapticFeedback.mediumImpact();
-    setState(() => _bookingDone = true);
-    _bookingTimeline[3]['done'] = true;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _BookingSuccessDialog(
-        onDone: () {
-          Navigator.pop(context);
-          setState(() => _navIndex = 1);
-        },
-      ),
-    );
-  }
-
-  void _categoryTap(String label) {
-    _requestController.text = 'I need a $label service';
-    _submitRequest();
+    final n = DateTime.now();
+    return '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}:${n.second.toString().padLeft(2, '0')}';
   }
 
   // ═══════════════ BUILD ═══════════════════════════════════════
@@ -274,7 +254,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── Bottom Nav ───────────────────────────────────────────────
+  // ── Bottom Nav ────────────────────────────────────────────────
 
   Widget _buildBottomNav() {
     final items = [
@@ -301,6 +281,8 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(items.length, (i) {
               final active = _navIndex == i;
+              // Show live booking badge on Bookings tab
+              final bookingCount = BookingManager().allBookings.length;
               return GestureDetector(
                 onTap: () => setState(() => _navIndex = i),
                 child: AnimatedContainer(
@@ -316,10 +298,38 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        items[i]['icon'] as IconData,
-                        color: active ? kBlue : kMuted,
-                        size: 22,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            items[i]['icon'] as IconData,
+                            color: active ? kBlue : kMuted,
+                            size: 22,
+                          ),
+                          if (i == 1 && bookingCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -6,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$bookingCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -343,7 +353,9 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── HOME TAB ─────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  // HOME TAB
+  // ══════════════════════════════════════════════════════════════
 
   Widget _buildHomeTab() {
     return CustomScrollView(
@@ -354,14 +366,9 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildGreetingCard(),
-              _buildRequestBox(),
-              if (_aiThinking) _buildThinkingIndicator(),
-              if (_showAiCard) _buildAiUnderstandingCard(),
-              if (_showProviders) _buildProviderSection(),
-              if (_showPricing) _buildPricingCard(),
-              if (_showPricing && !_bookingDone) _buildBookButton(),
-              if (!_showAiCard) _buildCategorySection(),
-              if (_bookingDone) _buildWorkflowTimeline(),
+              _buildAiLaunchCard(),
+              _buildCategorySection(),
+              _buildHowItWorksCard(),
               const SizedBox(height: 32),
             ],
           ),
@@ -370,7 +377,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── App Bar ──────────────────────────────────────────────────
+  // ── App Bar ───────────────────────────────────────────────────
 
   SliverAppBar _buildAppBar() {
     return SliverAppBar(
@@ -387,9 +394,9 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             child: CustomPaint(painter: PrismLogoPainter()),
           ),
           const SizedBox(width: 10),
-          Column(
+          const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text(
                 'PRISM AI',
                 style: TextStyle(
@@ -438,17 +445,24 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         ),
         Padding(
           padding: const EdgeInsets.only(right: 12),
-          child: CircleAvatar(
-            radius: 17,
-            backgroundColor: kBlue.withOpacity(0.12),
-            child: Text(
-              widget.userName.isNotEmpty
-                  ? widget.userName[0].toUpperCase()
-                  : 'U',
-              style: const TextStyle(
-                color: kBlue,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _navIndex = 3;
+              });
+            },
+            child: CircleAvatar(
+              radius: 17,
+              backgroundColor: kBlue.withOpacity(0.12),
+              child: Text(
+                widget.userName.isNotEmpty
+                    ? widget.userName[0].toUpperCase()
+                    : 'U',
+                style: const TextStyle(
+                  color: kBlue,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
@@ -461,11 +475,12 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── Welcome Card ─────────────────────────────────────────────
+  // ── Greeting Card ─────────────────────────────────────────────
 
   Widget _buildGreetingCard() {
-    final now = DateTime.now();
-    final dateStr = _formatDate(now);
+    final bookings = BookingManager().allBookings;
+    final bookingCount = bookings.length;
+    final latestBooking = bookings.isNotEmpty ? bookings.first : null;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -496,7 +511,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      dateStr,
+                      _formatDate(DateTime.now()),
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.5),
                         fontSize: 12,
@@ -537,12 +552,17 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4CAF50),
-                        shape: BoxShape.circle,
+                    AnimatedBuilder(
+                      animation: _pulseCtrl,
+                      builder: (context, child) => Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kGreen.withOpacity(
+                            0.5 + 0.5 * _pulseCtrl.value,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -562,11 +582,15 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
           const SizedBox(height: 18),
           Container(height: 1, color: Colors.white.withOpacity(0.08)),
           const SizedBox(height: 16),
+
+          // ── Live stats row ──────────────────────────────────
           Row(
             children: [
-              _statPill(Icons.check_circle_outline_rounded, '0', 'Bookings'),
-              const SizedBox(width: 10),
-              _statPill(Icons.search_rounded, '0', 'Searches'),
+              _statPill(
+                Icons.check_circle_outline_rounded,
+                '$bookingCount',
+                'Bookings',
+              ),
               const SizedBox(width: 10),
               _statPill(
                 Icons.location_on_outlined,
@@ -575,8 +599,41 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                     : widget.userCity,
                 'Location',
               ),
+              const SizedBox(width: 10),
+              _statPill(Icons.auto_awesome_rounded, 'ON', 'AI Engine'),
             ],
           ),
+
+          // ── Latest booking preview ──────────────────────────
+          if (latestBooking != null) ...[
+            const SizedBox(height: 14),
+            Container(height: 1, color: Colors.white.withOpacity(0.08)),
+            const SizedBox(height: 14),
+            GestureDetector(
+              onTap: () => setState(() => _navIndex = 1),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: kCyan, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Last: ${latestBooking.service} · ${latestBooking.providerName}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white30,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -617,39 +674,12 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  String _formatDate(DateTime dt) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    const days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    return '${days[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
-  }
+  // ── AI Launch Card (replaces broken Find Service box) ─────────
 
-  // ── AI Request Box ───────────────────────────────────────────
-
-  Widget _buildRequestBox() {
+  Widget _buildAiLaunchCard() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -665,7 +695,11 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Header badge
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -686,7 +720,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                     ),
                     SizedBox(width: 4),
                     Text(
-                      'AI Request',
+                      'AI-Powered Search',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -703,140 +737,73 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _requestController,
-            maxLines: 3,
-            minLines: 2,
-            style: const TextStyle(fontSize: 15, color: kText, height: 1.5),
-            decoration: InputDecoration(
-              hintText:
-                  '"Mujhe kal morning mein AC technician chahiye G-13 mein..."',
-              hintStyle: TextStyle(
-                color: kMuted.withOpacity(0.55),
-                fontSize: 14,
-                height: 1.5,
-              ),
-              filled: true,
-              fillColor: kCard,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: kBorder),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: kBorder),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: kBlue, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.all(14),
-            ),
+          const SizedBox(height: 14),
+
+          // Description
+          const Text(
+            'Describe what service you need in your own words — our AI understands Urdu, Roman Urdu, and English.',
+            style: TextStyle(fontSize: 13, color: kMuted, height: 1.55),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: kCard,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: kBorder),
-                ),
-                child: const Icon(Icons.mic_rounded, color: kBlue, size: 22),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _aiThinking ? null : _submitRequest,
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kBlue,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: kBlue.withOpacity(0.5),
-
-                      elevation: 6,
-                      shadowColor: kBlue.withOpacity(0.35),
-
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-
-                      children: [
-                        Icon(Icons.send_rounded, size: 18),
-
-                        SizedBox(width: 8),
-
-                        Text(
-                          'Find Service',
-
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
+          // Example chips
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children:
+                [
+                      '"AC repair kal subah"',
+                      '"Urgent electrician"',
+                      '"Plumber today"',
+                    ]
+                    .map(
+                      (e) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                        decoration: BoxDecoration(
+                          color: kCard,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: kBorder),
+                        ),
+                        child: Text(
+                          e,
+                          style: const TextStyle(fontSize: 11, color: kMuted),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
 
+          // Single CTA button
           SizedBox(
             width: double.infinity,
-            height: 44,
-
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-
-                  MaterialPageRoute(
-                    builder: (_) => ServiceRequestScreen(
-                      userName: widget.userName,
-                      userCity: widget.userCity,
-                    ),
-                  ),
-                );
-              },
-
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kBlue,
-
-                side: const BorderSide(color: kBorder),
-
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _goToAdvancedSearch,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kBlue,
+                foregroundColor: Colors.white,
+                elevation: 6,
+                shadowColor: kBlue.withOpacity(0.35),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-
                 children: [
-                  Icon(Icons.tune_rounded, size: 16),
-
-                  SizedBox(width: 8),
-
+                  Icon(Icons.psychology_rounded, size: 20),
+                  SizedBox(width: 10),
                   Text(
-                    'Advanced Request',
-
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    'Find a Service with AI',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, size: 16),
                 ],
               ),
             ),
@@ -846,262 +813,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── Thinking indicator ───────────────────────────────────────
-
-  Widget _buildThinkingIndicator() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        children: [
-          AnimatedBuilder(
-            animation: _pulseCtrl,
-            builder: (context, child) => Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kCyan.withOpacity(0.4 + 0.6 * _pulseCtrl.value),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          AnimatedBuilder(
-            animation: _pulseCtrl,
-            builder: (context, child) => Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kPurple.withOpacity(0.3 + 0.7 * (1 - _pulseCtrl.value)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          AnimatedBuilder(
-            animation: _pulseCtrl,
-            builder: (context, child) => Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kBlue.withOpacity(0.3 + 0.7 * _pulseCtrl.value),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'AI is analyzing your request...',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: kText,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Parsing language · Extracting intent · Matching providers',
-                  style: TextStyle(fontSize: 11, color: kMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── AI Understanding Card ────────────────────────────────────
-
-  Widget _buildAiUnderstandingCard() {
-    final confidence = _aiUnderstanding['confidence'] as int;
-    return FadeTransition(
-      opacity: _cardFade,
-      child: SlideTransition(
-        position: _cardSlide,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: kBorder),
-            boxShadow: [
-              BoxShadow(
-                color: kBlue.withOpacity(0.07),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [kPurple, kCyan]),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.psychology_rounded,
-                          color: Colors.white,
-                          size: 13,
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          'AI Understanding',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  // Confidence score
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF4CAF50).withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: Color(0xFF4CAF50),
-                          size: 13,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$confidence% Confidence',
-                          style: const TextStyle(
-                            color: Color(0xFF4CAF50),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // Confidence bar
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: confidence / 100,
-                  backgroundColor: kBorder,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF4CAF50),
-                  ),
-                  minHeight: 4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Extracted entities grid
-              _entityRow(
-                Icons.build_circle_rounded,
-                'Service',
-                _aiUnderstanding['service'] as String,
-                kBlue,
-              ),
-              const SizedBox(height: 10),
-              _entityRow(
-                Icons.location_on_rounded,
-                'Location',
-                _aiUnderstanding['location'] as String,
-                kPurple,
-              ),
-              const SizedBox(height: 10),
-              _entityRow(
-                Icons.warning_amber_rounded,
-                'Urgency',
-                _aiUnderstanding['urgency'] as String,
-                const Color(0xFFFF7043),
-              ),
-              const SizedBox(height: 10),
-              _entityRow(
-                Icons.schedule_rounded,
-                'Time',
-                _aiUnderstanding['time'] as String,
-                kCyan,
-              ),
-              const SizedBox(height: 10),
-              _entityRow(
-                Icons.account_balance_wallet_rounded,
-                'Budget',
-                _aiUnderstanding['budget'] as String,
-                const Color(0xFF66BB6A),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _entityRow(IconData icon, String label, String value, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-        const SizedBox(width: 10),
-        Text('$label: ', style: const TextStyle(fontSize: 13, color: kMuted)),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: kText,
-          ),
-        ),
-        const Spacer(),
-        const Icon(
-          Icons.check_circle_rounded,
-          color: Color(0xFF4CAF50),
-          size: 16,
-        ),
-      ],
-    );
-  }
-
-  // ── Category Section ─────────────────────────────────────────
+  // ── Category Section ──────────────────────────────────────────
 
   Widget _buildCategorySection() {
     return Column(
@@ -1181,246 +893,55 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── Provider Section ─────────────────────────────────────────
+  // ── How It Works Card ─────────────────────────────────────────
 
-  Widget _buildProviderSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-          child: Row(
-            children: const [
-              Icon(Icons.leaderboard_rounded, color: kBlue, size: 18),
+  Widget _buildHowItWorksCard() {
+    final steps = [
+      {
+        'icon': Icons.mic_rounded,
+        'color': kCyan,
+        'title': 'Describe',
+        'sub': 'Type or say what you need in any language',
+      },
+      {
+        'icon': Icons.psychology_rounded,
+        'color': kPurple,
+        'title': 'AI Parses',
+        'sub': 'Gemini extracts service, location & urgency',
+      },
+      {
+        'icon': Icons.leaderboard_rounded,
+        'color': kBlue,
+        'title': 'Ranked',
+        'sub': '6-factor AI ranks the best providers',
+      },
+      {
+        'icon': Icons.flash_on_rounded,
+        'color': const Color(0xFF4CAF50),
+        'title': 'Booked',
+        'sub': 'Confirm and track your appointment',
+      },
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: kPurple, size: 16),
               SizedBox(width: 7),
               Text(
-                'AI-Ranked Providers',
+                'How PRISM AI Works',
                 style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: kText,
-                ),
-              ),
-            ],
-          ),
-        ),
-        ..._providers.asMap().entries.map((e) {
-          final idx = e.key;
-          final p = e.value;
-          return _ProviderCard(
-            provider: p,
-            rank: idx + 1,
-            onBook: idx == 0 ? null : () {},
-          );
-        }),
-      ],
-    );
-  }
-
-  // ── Pricing Card ─────────────────────────────────────────────
-
-  Widget _buildPricingCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: kBlue.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.receipt_long_rounded, color: kBlue, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'Dynamic Price Estimate',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: kText,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _priceRow('Base Service Fee', 'Rs 1,800', false),
-          _priceRow('Distance Cost (2.1 km)', 'Rs 300', false),
-          _priceRow('Urgency Charge (High)', 'Rs 200', false),
-          _priceRow('Loyalty Discount', '– Rs 100', false, isDiscount: true),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(color: kBorder, thickness: 1.5),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Final Price',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: kText,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [kBlue, kPurple]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Rs 2,200',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50).withOpacity(0.06),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFF4CAF50).withOpacity(0.2),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: Color(0xFF4CAF50),
-                  size: 14,
-                ),
-                SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    'Fair pricing based on demand, urgency & distance. Both user & provider rates are transparent.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF4CAF50),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _priceRow(
-    String label,
-    String amount,
-    bool isTotal, {
-    bool isDiscount = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: kMuted)),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDiscount ? const Color(0xFF4CAF50) : kText,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Book Button ──────────────────────────────────────────────
-
-  Widget _buildBookButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      child: SizedBox(
-        width: double.infinity,
-        height: 58,
-        child: ElevatedButton(
-          onPressed: _bookNow,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: kBlue,
-            foregroundColor: Colors.white,
-            elevation: 10,
-            shadowColor: kBlue.withOpacity(0.4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.flash_on_rounded, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Book Appointment — Rs 2,200',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Workflow Timeline ─────────────────────────────────────────
-
-  Widget _buildWorkflowTimeline() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: kBlue.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.account_tree_rounded, color: kPurple, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'Booking Workflow',
-                style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: kText,
                 ),
@@ -1428,96 +949,91 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             ],
           ),
           const SizedBox(height: 16),
-          ..._bookingTimeline.asMap().entries.map((e) {
-            final i = e.key;
-            final step = e.value;
-            final isDone = step['done'] as bool;
-            final isLast = i == _bookingTimeline.length - 1;
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
+          Row(
+            children: steps.asMap().entries.map((e) {
+              final s = e.value;
+              final isLast = e.key == steps.length - 1;
+              return Expanded(
+                child: Row(
                   children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: isDone ? const Color(0xFF4CAF50) : kCard,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDone ? const Color(0xFF4CAF50) : kBorder,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Icon(
-                        isDone ? Icons.check_rounded : Icons.circle_outlined,
-                        size: 14,
-                        color: isDone ? Colors.white : kMuted,
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: (s['color'] as Color).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              s['icon'] as IconData,
+                              color: s['color'] as Color,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            s['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: kText,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            s['sub'] as String,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 9.5,
+                              color: kMuted,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (!isLast)
-                      Container(
-                        width: 2,
-                        height: 28,
-                        color: isDone
-                            ? const Color(0xFF4CAF50).withOpacity(0.3)
-                            : kBorder,
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: kBorder,
+                        size: 18,
                       ),
                   ],
                 ),
-                const SizedBox(width: 12),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    step['label'] as String,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isDone ? FontWeight.w600 : FontWeight.w400,
-                      color: isDone ? kText : kMuted,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
   }
 
-  // ═══════════════ BOOKINGS TAB ════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  // BOOKINGS TAB  — real data from BookingManager
+  // ══════════════════════════════════════════════════════════════
 
   Widget _buildBookingsTab() {
+    final bookings = BookingManager().allBookings;
+
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _tabHeader('My Bookings', Icons.calendar_today_rounded),
           Expanded(
-            child: AppState.bookings.isEmpty
+            child: bookings.isEmpty
                 ? _emptyState(
                     Icons.calendar_today_rounded,
                     'No bookings yet',
-                    'Submit a service request on the Home tab to get started.',
+                    'Use "Find a Service with AI" on the Home tab to make your first booking.',
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: AppState.bookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = AppState.bookings[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PastBookingCard(
-                          service: booking.service,
-                          provider: booking.providerName,
-                          date:
-                              '${booking.time.day}/${booking.time.month}/${booking.time.year}',
-                          status: 'Confirmed',
-                          rating: 5.0,
-                        ),
-                      );
-                    },
+                    itemCount: bookings.length,
+                    itemBuilder: (_, i) =>
+                        _buildBookingCard(bookings[i], isFirst: i == 0),
                   ),
           ),
         ],
@@ -1525,81 +1041,181 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ═══════════════ AI TRACE TAB ════════════════════════════════
+  Widget _buildBookingCard(BookingModel b, {required bool isFirst}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isFirst ? kNavy : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isFirst ? Colors.transparent : kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: (isFirst ? kNavy : kBlue).withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: kGreen.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: kGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      b.status,
+                      style: const TextStyle(
+                        color: kGreen,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                b.bookingId,
+                style: TextStyle(
+                  color: isFirst ? const Color(0xFF8BAACC) : kMuted,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Service & provider
+          Text(
+            b.service,
+            style: TextStyle(
+              color: isFirst ? Colors.white : kText,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            b.providerName,
+            style: TextStyle(
+              color: isFirst ? const Color(0xFF8BAACC) : kMuted,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Slot & city
+          Row(
+            children: [
+              Icon(Icons.access_time_rounded, color: kCyan, size: 14),
+              const SizedBox(width: 5),
+              Text(
+                b.slot,
+                style: TextStyle(
+                  color: isFirst ? Colors.white : kText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Icon(Icons.location_on_rounded, color: kCyan, size: 14),
+              const SizedBox(width: 5),
+              Text(
+                b.city,
+                style: TextStyle(
+                  color: isFirst ? Colors.white : kText,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Price & payment
+          Text(
+            'Rs ${_formatPrice(b.price)} · ${b.paymentMethod}',
+            style: TextStyle(
+              color: isFirst ? const Color(0xFF8BAACC) : kMuted,
+              fontSize: 12,
+            ),
+          ),
+
+          // Action buttons for most recent booking
+          if (isFirst) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {},
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFF8BAACC)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Track', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Contact',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatPrice(int price) => price.toString().replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+    (m) => '${m[1]},',
+  );
+
+  // ══════════════════════════════════════════════════════════════
+  // AI TRACE TAB
+  // ══════════════════════════════════════════════════════════════
 
   Widget _buildAiTraceTab() {
-    final logs = [
-      _TraceLog(
-        agent: 'Language Parser',
-        icon: Icons.translate_rounded,
-        color: kPurple,
-        action: 'Intent Extraction',
-        detail:
-            'Input: "Mujhe kal morning mein AC technician chahiye G-13 mein"\nDetected: Roman Urdu + English mix\nConfidence: 92%',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Entity Extractor',
-        icon: Icons.data_object_rounded,
-        color: kCyan,
-        action: 'Field Extraction',
-        detail:
-            'service=AC Repair · location=G-13 · time=tomorrow morning · urgency=HIGH · budget_sensitivity=MEDIUM',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Provider Discovery',
-        icon: Icons.search_rounded,
-        color: kBlue,
-        action: 'Mock Dataset Query',
-        detail:
-            'Query: AC technicians near G-13, Islamabad\nResult: 3 providers found\nFilters applied: availability=true, rating≥4.0',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Ranking Engine',
-        icon: Icons.leaderboard_rounded,
-        color: const Color(0xFFFF7043),
-        action: 'Multi-Factor Ranking',
-        detail:
-            'Factors: distance(20%) + rating(25%) + on-time(20%) + specialization(20%) + price(15%)\nWinner: Ali AC Services\nReason: Higher reliability despite not being nearest',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Pricing Engine',
-        icon: Icons.price_change_rounded,
-        color: const Color(0xFF66BB6A),
-        action: 'Dynamic Quote',
-        detail:
-            'Base: 1800 + Distance(300) + Urgency(200) – Loyalty(100) = Rs 2,200\nFairness check: ✓ Provider rate within market bounds',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Scheduling Agent',
-        icon: Icons.event_available_rounded,
-        color: kPurple,
-        action: 'Slot Reservation',
-        detail:
-            'Slot: Tomorrow 10:00 AM\nDouble-booking check: ✓ Clear\nTravel buffer: 20 min added\nCalendar updated: ✓',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-      _TraceLog(
-        agent: 'Booking Simulator',
-        icon: Icons.receipt_rounded,
-        color: kBlue,
-        action: 'Confirmation Dispatch',
-        detail:
-            'SMS/WhatsApp: Simulated ✓\nBooking ID: #PRZ-2024-001\nProvider notified: ✓\nReminder scheduled: T-60min ✓',
-        timestamp: _currentTime(),
-        success: true,
-      ),
-    ];
+    final hasBookings = BookingManager().allBookings.isNotEmpty;
 
     return SafeArea(
       child: Column(
@@ -1616,13 +1232,13 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                 ),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.hub_rounded, color: kCyan, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
+                  const Icon(Icons.hub_rounded, color: kCyan, size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(
                     child: Text(
-                      'Antigravity Orchestrator — Live agent reasoning pipeline',
+                      'Gemini Orchestrator — Multi-agent pipeline',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -1630,27 +1246,34 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                       ),
                     ),
                   ),
-                  Icon(Icons.circle, color: Color(0xFF4CAF50), size: 8),
-                  SizedBox(width: 4),
-                  Text(
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (context, child) => Icon(
+                      Icons.circle,
+                      color: kGreen.withOpacity(0.4 + 0.6 * _pulseCtrl.value),
+                      size: 8,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
                     'Active',
-                    style: TextStyle(color: Color(0xFF4CAF50), fontSize: 11),
+                    style: TextStyle(color: kGreen, fontSize: 11),
                   ),
                 ],
               ),
             ),
           ),
           Expanded(
-            child: _showAiCard
+            child: hasBookings
                 ? ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: logs.length,
-                    itemBuilder: (_, i) => _TraceLogCard(log: logs[i]),
+                    itemCount: _traceLogs.length,
+                    itemBuilder: (_, i) => _TraceLogCard(log: _traceLogs[i]),
                   )
                 : _emptyState(
                     Icons.psychology_outlined,
                     'No trace yet',
-                    'Submit a service request to see AI reasoning logs.',
+                    'Make a booking via AI search to see the reasoning pipeline.',
                   ),
           ),
         ],
@@ -1658,9 +1281,14 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ═══════════════ PROFILE TAB ══════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  // PROFILE TAB
+  // ══════════════════════════════════════════════════════════════
 
   Widget _buildProfileTab() {
+    final bookings = BookingManager().allBookings;
+    final bookCount = bookings.length;
+
     return SafeArea(
       child: ListView(
         children: [
@@ -1730,21 +1358,21 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             ),
           ),
           const SizedBox(height: 20),
-          // Stats row
+          // Stats
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 _statCard(
                   'Bookings',
-                  _bookingDone ? '1' : '0',
+                  '$bookCount',
                   Icons.calendar_today_rounded,
                   kBlue,
                 ),
                 const SizedBox(width: 10),
                 _statCard(
                   'AI Searches',
-                  _showAiCard ? '1' : '0',
+                  '$bookCount',
                   Icons.search_rounded,
                   kPurple,
                 ),
@@ -1759,7 +1387,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
             ),
           ),
           const SizedBox(height: 20),
-          // Menu items
+          // Menu
           ...[
             ('My Addresses', Icons.home_rounded, kBlue),
             ('Payment Methods', Icons.credit_card_rounded, kPurple),
@@ -1892,435 +1520,20 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: kMuted, height: 1.5),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  PROVIDER CARD WIDGET
-// ═══════════════════════════════════════════════════════════════
-
-class _ProviderCard extends StatefulWidget {
-  final Map<String, dynamic> provider;
-  final int rank;
-  final VoidCallback? onBook;
-
-  const _ProviderCard({
-    required this.provider,
-    required this.rank,
-    this.onBook,
-  });
-
-  @override
-  State<_ProviderCard> createState() => _ProviderCardState();
-}
-
-class _ProviderCardState extends State<_ProviderCard> {
-  bool _expanded = false;
-
-  static const kBlue = Color(0xFF185FA5);
-  static const kText = Color(0xFF1A1A2E);
-  static const kMuted = Color(0xFF6B7A8D);
-  static const kCard = Color(0xFFF5F9FF);
-  static const kBorder = Color(0xFFD8E6F5);
-
-  @override
-  Widget build(BuildContext context) {
-    final p = widget.provider;
-    final isTop = widget.rank == 1;
-
-    return GestureDetector(
-      onTap: () => setState(() => _expanded = !_expanded),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isTop ? kBlue.withOpacity(0.4) : kBorder,
-            width: isTop ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (isTop ? kBlue : Colors.black).withOpacity(
-                isTop ? 0.1 : 0.04,
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => setState(() => _navIndex = 0),
+              icon: const Icon(Icons.home_rounded, size: 16),
+              label: const Text(
+                'Go to Home',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header row
-                  Row(
-                    children: [
-                      // Rank circle
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isTop ? kBlue : kCard,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '#${widget.rank}',
-                            style: TextStyle(
-                              color: isTop ? Colors.white : kMuted,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              p['name'] as String,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                                color: kText,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  color: Color(0xFFFFB347),
-                                  size: 13,
-                                ),
-                                Text(
-                                  ' ${p['rating']}  (${p['reviews']} reviews)',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: kMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (p['badgeColor'] as Color).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: (p['badgeColor'] as Color).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          p['badge'] as String,
-                          style: TextStyle(
-                            color: p['badgeColor'] as Color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Info chips
-                  Row(
-                    children: [
-                      _chip(Icons.location_on_rounded, p['distance'] as String),
-                      const SizedBox(width: 6),
-                      _chip(Icons.timer_rounded, 'On-time: ${p['onTime']}%'),
-                      const SizedBox(width: 6),
-                      _chip(
-                        Icons.access_time_rounded,
-                        p['available'] as String,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Price + expand
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Estimated Price',
-                            style: TextStyle(fontSize: 11, color: kMuted),
-                          ),
-                          Text(
-                            'Rs ${(p['price'] as int).toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: kBlue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            _expanded
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: kMuted,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _expanded ? 'Less' : 'Why Recommended?',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: kBlue,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // Expandable reasons
-                  if (_expanded) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: kCard,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: kBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Why Recommended?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              color: kText,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...(p['reasons'] as List<String>).map(
-                            (r) => Padding(
-                              padding: const EdgeInsets.only(bottom: 5),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle_rounded,
-                                    color: Color(0xFF4CAF50),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 7),
-                                  Text(
-                                    r,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: kText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isTop) ...[
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 42,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            AppState.bookings.insert(
-                              0,
-                              BookingItem(
-                                providerName: p['name'] ?? 'Provider',
-                                service: 'Home Service',
-                                city: 'Your City',
-                                time: DateTime.now(),
-                                price: p['price'] ?? 0,
-                                providerData: p,
-                              ),
-                            );
-
-                            setState(() {});
-
-                            showDialog(
-                              context: context,
-                              builder: (_) => _BookingSuccessDialog(
-                                onDone: () {
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            );
-                          },
-
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kBlue,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Select This Provider',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _chip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: kCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: kMuted),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 10.5, color: kMuted)),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  BOOKING SUCCESS DIALOG
-// ═══════════════════════════════════════════════════════════════
-
-class _BookingSuccessDialog extends StatelessWidget {
-  final VoidCallback onDone;
-  const _BookingSuccessDialog({required this.onDone});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_rounded,
-                color: Colors.white,
-                size: 38,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Booking Confirmed!',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Ali AC Services\nSlot: Tomorrow 10:00 AM\nBooking ID: #PRZ-2024-001',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF6B7A8D),
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.notifications_active_rounded,
-                    color: Color(0xFF4CAF50),
-                    size: 14,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Reminder set for 9:00 AM',
-                    style: TextStyle(
-                      color: Color(0xFF4CAF50),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: onDone,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF185FA5),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'View My Bookings',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
@@ -2332,255 +1545,7 @@ class _BookingSuccessDialog extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BOOKING TAB CARDS
-// ═══════════════════════════════════════════════════════════════
-
-class _ActiveBookingCard extends StatelessWidget {
-  static const kBlue = Color(0xFF185FA5);
-  static const kText = Color(0xFF1A1A2E);
-  static const kMuted = Color(0xFF6B7A8D);
-  static const kBorder = Color(0xFFD8E6F5);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0A1628), Color(0xFF1A2E50)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.circle, color: Color(0xFF4CAF50), size: 7),
-                    SizedBox(width: 5),
-                    Text(
-                      'Active',
-                      style: TextStyle(
-                        color: Color(0xFF4CAF50),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Text(
-                '#PRZ-2024-001',
-                style: TextStyle(color: Color(0xFF8BAACC), fontSize: 11),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'AC Repair Service',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Ali AC Services',
-            style: TextStyle(color: Color(0xFF8BAACC), fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: const [
-              Icon(
-                Icons.access_time_rounded,
-                color: Color(0xFF00C2D4),
-                size: 14,
-              ),
-              SizedBox(width: 5),
-              Text(
-                'Tomorrow — 10:00 AM',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(width: 14),
-              Icon(
-                Icons.location_on_rounded,
-                color: Color(0xFF00C2D4),
-                size: 14,
-              ),
-              SizedBox(width: 5),
-              Text(
-                'G-13, Islamabad',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFF8BAACC)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Track', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kBlue,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Contact', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PastBookingCard extends StatelessWidget {
-  final String service;
-  final String provider;
-  final String date;
-  final String status;
-  final double rating;
-
-  const _PastBookingCard({
-    required this.service,
-    required this.provider,
-    required this.date,
-    required this.status,
-    required this.rating,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD8E6F5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F9FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: Color(0xFF4CAF50),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  service,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$provider · $date',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6B7A8D),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    color: Color(0xFFFFB347),
-                    size: 13,
-                  ),
-                  Text(
-                    ' $rating',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF4CAF50),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  AI TRACE LOG CARD
+// AI TRACE LOG
 // ═══════════════════════════════════════════════════════════════
 
 class _TraceLog {
@@ -2722,6 +1687,10 @@ class _TraceLogCardState extends State<_TraceLogCard> {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// HomeScreen wrapper (keeps existing navigation working)
+// ═══════════════════════════════════════════════════════════════
 
 class HomeScreen extends StatelessWidget {
   final String userName;
