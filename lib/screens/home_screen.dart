@@ -17,6 +17,7 @@ import 'splash_screen.dart';
 import '../services/gemini_service.dart';
 import 'service_request_screen.dart';
 import '../services/booking_manager.dart';
+import 'agent_dashboard_screen.dart';
 
 class PrismHomeScreen extends StatefulWidget {
   final String userName;
@@ -1263,6 +1264,43 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AgentDashboardScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.dashboard_customize_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Open Agent Dashboard',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
           Expanded(
             child: hasBookings
                 ? ListView.builder(
