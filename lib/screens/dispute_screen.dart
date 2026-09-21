@@ -1,8 +1,8 @@
 // ============================================================
 // screens/dispute_screen.dart
-// PRISM AI — Dispute & Edge Case Handler
-// Simulates: late provider, wrong price, cancellation, poor service
-// Shows: AI auto-resolution with fallback logic
+// PRISM AI — Dispute & Support
+// Handles common booking issues and support requests
+// Provides simulated resolution outcomes for reported issues
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -13,11 +13,15 @@ import '../utils/colors.dart';
 class DisputeScreen extends StatefulWidget {
   final Map<String, dynamic>? provider;
   final String bookingId;
+  final String? service;
+  final bool isStandalone;
 
   const DisputeScreen({
     super.key,
     this.provider,
-    this.bookingId = '#PRZ-2026-001', required String service,
+    this.bookingId = '#PRZ-2026-001',
+    this.service,
+    this.isStandalone = false,
   });
 
   @override
@@ -281,10 +285,15 @@ class _DisputeScreenState extends State<DisputeScreen>
       backgroundColor: Colors.white,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textDark),
-        onPressed: () => Navigator.pop(context),
-      ),
+      leading: widget.isStandalone
+          ? const SizedBox.shrink()
+          : IconButton(
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: AppColors.textDark,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
       title: Row(
         children: [
           SizedBox(
@@ -293,22 +302,13 @@ class _DisputeScreenState extends State<DisputeScreen>
             child: CustomPaint(painter: PrismLogoPainter()),
           ),
           const SizedBox(width: 10),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dispute & Support',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
-              ),
-              Text(
-                'AI Resolution Agent',
-                style: TextStyle(fontSize: 10, color: AppColors.textMuted),
-              ),
-            ],
+          const Text(
+            'Dispute & Support',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textDark,
+            ),
           ),
         ],
       ),
@@ -361,7 +361,9 @@ class _DisputeScreenState extends State<DisputeScreen>
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Booking: ${widget.bookingId}',
+                  widget.isStandalone
+                      ? 'Need help? Report an issue or get support'
+                      : 'Booking: ${widget.bookingId}',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.6),
                     fontSize: 12,
@@ -378,10 +380,14 @@ class _DisputeScreenState extends State<DisputeScreen>
             ),
             child: const Row(
               children: [
-                Icon(Icons.psychology_rounded, color: AppColors.cyan, size: 12),
+                Icon(
+                  Icons.support_agent_rounded,
+                  color: AppColors.cyan,
+                  size: 12,
+                ),
                 SizedBox(width: 4),
                 Text(
-                  'AI Auto-Resolve',
+                  'Support',
                   style: TextStyle(
                     color: AppColors.cyan,
                     fontSize: 10,
@@ -581,7 +587,7 @@ class _DisputeScreenState extends State<DisputeScreen>
               ),
               const SizedBox(width: 10),
               const Text(
-                'Dispute Resolution Agent Running...',
+                'Processing your request...',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -592,11 +598,11 @@ class _DisputeScreenState extends State<DisputeScreen>
           ),
           const SizedBox(height: 14),
           ...[
-            'Verifying booking record...',
-            'Analysing issue type...',
-            'Checking provider history...',
-            'Calculating resolution...',
-            'Dispatching automated action...',
+            'Verifying your booking...',
+            'Reviewing the reported issue...',
+            'Checking available options...',
+            'Preparing a resolution...',
+            'Processing your request...',
           ].map(
             (s) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -654,7 +660,7 @@ class _DisputeScreenState extends State<DisputeScreen>
               Icon(Icons.support_agent_rounded, size: 20),
               SizedBox(width: 10),
               Text(
-                'Submit Dispute — AI Will Resolve',
+                'Submit Dispute',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
             ],
@@ -752,7 +758,7 @@ class _DisputeScreenState extends State<DisputeScreen>
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text(
-                                  '✓ Auto-Resolved',
+                                  '✓ Resolved',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -923,11 +929,6 @@ class _DisputeScreenState extends State<DisputeScreen>
                           'Provider Score Updated',
                           AppColors.warning,
                         ),
-                        _outcomePill(
-                          Icons.hub_rounded,
-                          'Logged in AI Trace',
-                          AppColors.cyan,
-                        ),
                       ],
                     ),
                   ],
@@ -935,38 +936,6 @@ class _DisputeScreenState extends State<DisputeScreen>
               ),
 
               const SizedBox(height: 12),
-
-              // Agent log
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.navy,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Dispute Agent Log',
-                      style: TextStyle(
-                        color: AppColors.cyan,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _logLine('[Dispute Agent] Issue: $_selectedIssue'),
-                    _logLine('[Dispute Agent] Booking: ${widget.bookingId}'),
-                    _logLine('[Resolution Engine] Severity: $severity'),
-                    _logLine('[Action Agent] Auto-resolution triggered'),
-                    _logLine('[Action Agent] Provider score updated'),
-                    _logLine(
-                      '[Orchestrator] Case closed. ID: DSP-${DateTime.now().millisecondsSinceEpoch % 9999}',
-                    ),
-                  ],
-                ),
-              ),
 
               const SizedBox(height: 16),
 
@@ -1019,21 +988,6 @@ class _DisputeScreenState extends State<DisputeScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _logLine(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 10,
-          color: Color(0xFF8BAACC),
-          height: 1.6,
-        ),
       ),
     );
   }

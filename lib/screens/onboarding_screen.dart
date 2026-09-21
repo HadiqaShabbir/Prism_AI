@@ -32,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       illustrationWidget: const _IllustrationMatch(),
       title: 'AI Picks the Best',
       subtitle:
-          'Ranked by distance, rating and availability. The smartest match is always at the top.',
+          'Providers are ranked by distance, rating, and availability to help you find the right match.',
       accentColor: const Color(0xFF0C447C),
       bgGradient: const [Color(0xFFEDF4FF), Color(0xFFD6E8FF)],
     ),
@@ -50,12 +50,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void initState() {
     super.initState();
     _illustrationCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _illustrationScale = Tween<double>(begin: 0.88, end: 1.0).animate(
-        CurvedAnimation(
-            parent: _illustrationCtrl, curve: Curves.easeOutBack));
-    _illustrationFade =
-        CurvedAnimation(parent: _illustrationCtrl, curve: Curves.easeOut);
+      CurvedAnimation(parent: _illustrationCtrl, curve: Curves.easeOutBack),
+    );
+    _illustrationFade = CurvedAnimation(
+      parent: _illustrationCtrl,
+      curve: Curves.easeOut,
+    );
     _illustrationCtrl.forward();
   }
 
@@ -87,8 +91,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _next() {
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut);
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
     } else {
       _goToLogin();
     }
@@ -112,8 +117,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: Column(
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -141,10 +148,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFF888780),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
-                      child: const Text('Skip',
-                          style: TextStyle(fontSize: 14)),
+                      child: const Text('Skip', style: TextStyle(fontSize: 14)),
                     ),
                   ],
                 ),
@@ -169,8 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               ? _illustrationScale.value
                               : 1.0,
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: s.illustrationWidget,
                           ),
                         ),
@@ -213,9 +220,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           opacity: anim,
                           child: SlideTransition(
                             position: Tween<Offset>(
-                                    begin: const Offset(0.08, 0),
-                                    end: Offset.zero)
-                                .animate(anim),
+                              begin: const Offset(0.08, 0),
+                              end: Offset.zero,
+                            ).animate(anim),
                             child: child,
                           ),
                         ),
@@ -256,8 +263,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             backgroundColor: slide.accentColor,
                             foregroundColor: Colors.white,
                             elevation: 8,
-                            shadowColor:
-                                slide.accentColor.withOpacity(0.4),
+                            shadowColor: slide.accentColor.withOpacity(0.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -334,10 +340,13 @@ class _IllustrationSearchState extends State<_IllustrationSearch>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 3))
-      ..repeat(reverse: true);
-    _float = Tween<double>(begin: -8, end: 8)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _float = Tween<double>(
+      begin: -8,
+      end: 8,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -354,8 +363,10 @@ class _IllustrationSearchState extends State<_IllustrationSearch>
         offset: Offset(0, _float.value),
         child: CustomPaint(
           painter: _SearchPainter(),
-          child:
-              const SizedBox(width: double.infinity, height: double.infinity),
+          child: const SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+          ),
         ),
       ),
     );
@@ -370,9 +381,10 @@ class _SearchPainter extends CustomPainter {
 
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx, cy - 10),
-          width: size.width * 0.82,
-          height: size.height * 0.72),
+        center: Offset(cx, cy - 10),
+        width: size.width * 0.82,
+        height: size.height * 0.72,
+      ),
       Paint()..color = const Color(0xFF185FA5).withOpacity(0.08),
     );
 
@@ -380,8 +392,7 @@ class _SearchPainter extends CustomPainter {
       ..color = const Color(0xFF185FA5).withOpacity(0.15)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
     final phoneRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-          center: Offset(cx, cy - 5), width: 140, height: 240),
+      Rect.fromCenter(center: Offset(cx, cy - 5), width: 140, height: 240),
       const Radius.circular(24),
     );
     canvas.drawRRect(phoneRect, phoneShadow);
@@ -389,17 +400,22 @@ class _SearchPainter extends CustomPainter {
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(
-            center: Offset(cx, cy - 5), width: 118, height: 198),
+        Rect.fromCenter(center: Offset(cx, cy - 5), width: 118, height: 198),
         const Radius.circular(20),
       ),
       Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFFEEF5FF), Color(0xFFDCEBFF)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ).createShader(Rect.fromCenter(
-            center: Offset(cx, cy - 5), width: 118, height: 198)),
+        ..shader =
+            const LinearGradient(
+              colors: [Color(0xFFEEF5FF), Color(0xFFDCEBFF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ).createShader(
+              Rect.fromCenter(
+                center: Offset(cx, cy - 5),
+                width: 118,
+                height: 198,
+              ),
+            ),
     );
 
     canvas.drawRRect(
@@ -416,7 +432,10 @@ class _SearchPainter extends CustomPainter {
       ..strokeWidth = 2;
     canvas.drawCircle(Offset(cx - 32, cy - 66), 7, searchIcon);
     canvas.drawLine(
-        Offset(cx - 27, cy - 61), Offset(cx - 23, cy - 57), searchIcon);
+      Offset(cx - 27, cy - 61),
+      Offset(cx - 23, cy - 57),
+      searchIcon,
+    );
 
     final linePaint = Paint()
       ..color = const Color(0xFF185FA5).withOpacity(0.15)
@@ -428,12 +447,24 @@ class _SearchPainter extends CustomPainter {
       canvas.drawLine(Offset(cx - 46, y), Offset(cx - 46 + w, y), linePaint);
     }
 
-    _drawStar(canvas, Offset(cx + 38, cy - 90), 8,
-        Paint()..color = const Color(0xFF185FA5));
-    _drawStar(canvas, Offset(cx - 55, cy - 50), 5,
-        Paint()..color = const Color(0xFF6FB3FF));
-    _drawStar(canvas, Offset(cx + 55, cy + 30), 6,
-        Paint()..color = const Color(0xFF3A8FD6));
+    _drawStar(
+      canvas,
+      Offset(cx + 38, cy - 90),
+      8,
+      Paint()..color = const Color(0xFF185FA5),
+    );
+    _drawStar(
+      canvas,
+      Offset(cx - 55, cy - 50),
+      5,
+      Paint()..color = const Color(0xFF6FB3FF),
+    );
+    _drawStar(
+      canvas,
+      Offset(cx + 55, cy + 30),
+      6,
+      Paint()..color = const Color(0xFF3A8FD6),
+    );
   }
 
   void _drawStar(Canvas canvas, Offset center, double size, Paint paint) {
@@ -446,8 +477,10 @@ class _SearchPainter extends CustomPainter {
         path.moveTo(x, y);
       } else {
         final midAngle = (i - 0.5) * math.pi / 2 - math.pi / 4;
-        path.lineTo(center.dx + math.cos(midAngle) * size * 0.4,
-            center.dy + math.sin(midAngle) * size * 0.4);
+        path.lineTo(
+          center.dx + math.cos(midAngle) * size * 0.4,
+          center.dy + math.sin(midAngle) * size * 0.4,
+        );
         path.lineTo(x, y);
       }
     }
@@ -475,8 +508,9 @@ class _IllustrationMatchState extends State<_IllustrationMatch>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
     _pulse = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
@@ -492,8 +526,7 @@ class _IllustrationMatchState extends State<_IllustrationMatch>
       animation: _pulse,
       builder: (_, _) => CustomPaint(
         painter: _MatchPainter(_pulse.value),
-        child:
-            const SizedBox(width: double.infinity, height: double.infinity),
+        child: const SizedBox(width: double.infinity, height: double.infinity),
       ),
     );
   }
@@ -510,21 +543,23 @@ class _MatchPainter extends CustomPainter {
 
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx, cy),
-          width: size.width * 0.8,
-          height: size.height * 0.68),
+        center: Offset(cx, cy),
+        width: size.width * 0.8,
+        height: size.height * 0.68,
+      ),
       Paint()..color = const Color(0xFF0C447C).withOpacity(0.08),
     );
 
     canvas.drawCircle(
       Offset(cx, cy),
       52.0 + 8 * pulse,
-      Paint()
-        ..color = const Color(0xFF185FA5)
-            .withOpacity(0.08 - 0.04 * pulse),
+      Paint()..color = const Color(0xFF185FA5).withOpacity(0.08 - 0.04 * pulse),
     );
-    canvas.drawCircle(Offset(cx, cy), 48,
-        Paint()..color = const Color(0xFF185FA5));
+    canvas.drawCircle(
+      Offset(cx, cy),
+      48,
+      Paint()..color = const Color(0xFF185FA5),
+    );
 
     final iconPaint = Paint()
       ..color = Colors.white
@@ -533,14 +568,18 @@ class _MatchPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(Offset(cx, cy - 4), 14, iconPaint);
     canvas.drawLine(
-        Offset(cx - 14, cy - 4), Offset(cx - 22, cy - 4), iconPaint);
+      Offset(cx - 14, cy - 4),
+      Offset(cx - 22, cy - 4),
+      iconPaint,
+    );
     canvas.drawLine(
-        Offset(cx + 14, cy - 4), Offset(cx + 22, cy - 4), iconPaint);
+      Offset(cx + 14, cy - 4),
+      Offset(cx + 22, cy - 4),
+      iconPaint,
+    );
     canvas.drawLine(Offset(cx, cy + 10), Offset(cx, cy + 20), iconPaint);
-    canvas.drawLine(
-        Offset(cx, cy + 20), Offset(cx - 6, cy + 26), iconPaint);
-    canvas.drawLine(
-        Offset(cx, cy + 20), Offset(cx + 6, cy + 26), iconPaint);
+    canvas.drawLine(Offset(cx, cy + 20), Offset(cx - 6, cy + 26), iconPaint);
+    canvas.drawLine(Offset(cx, cy + 20), Offset(cx + 6, cy + 26), iconPaint);
 
     _drawCard(canvas, Offset(cx, cy - 120), '4.9', 'Electrician', pulse);
     _drawCard(canvas, Offset(cx + 110, cy + 30), '4.7', 'Plumber', pulse);
@@ -549,29 +588,41 @@ class _MatchPainter extends CustomPainter {
     final linePaint = Paint()
       ..color = const Color(0xFF185FA5).withOpacity(0.2)
       ..strokeWidth = 1.5;
+    canvas.drawLine(Offset(cx, cy - 48), Offset(cx, cy - 90), linePaint);
     canvas.drawLine(
-        Offset(cx, cy - 48), Offset(cx, cy - 90), linePaint);
+      Offset(cx + 42, cy + 24),
+      Offset(cx + 85, cy + 40),
+      linePaint,
+    );
     canvas.drawLine(
-        Offset(cx + 42, cy + 24), Offset(cx + 85, cy + 40), linePaint);
-    canvas.drawLine(
-        Offset(cx - 42, cy + 24), Offset(cx - 85, cy + 40), linePaint);
+      Offset(cx - 42, cy + 24),
+      Offset(cx - 85, cy + 40),
+      linePaint,
+    );
   }
 
-  void _drawCard(Canvas canvas, Offset center, String rating, String label,
-      double pulse) {
+  void _drawCard(
+    Canvas canvas,
+    Offset center,
+    String rating,
+    String label,
+    double pulse,
+  ) {
     final shadow = Paint()
       ..color = const Color(0xFF185FA5).withOpacity(0.15)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
     final rect = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: center, width: 86, height: 38),
-        const Radius.circular(10));
+      Rect.fromCenter(center: center, width: 86, height: 38),
+      const Radius.circular(10),
+    );
     canvas.drawRRect(rect, shadow);
     canvas.drawRRect(rect, Paint()..color = Colors.white);
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-          Rect.fromLTWH(center.dx - 43, center.dy - 19, 4, 38),
-          const Radius.circular(10)),
+        Rect.fromLTWH(center.dx - 43, center.dy - 19, 4, 38),
+        const Radius.circular(10),
+      ),
       Paint()..color = const Color(0xFF185FA5),
     );
 
@@ -618,8 +669,9 @@ class _IllustrationBookState extends State<_IllustrationBook>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2000))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
     _tick = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
@@ -635,8 +687,7 @@ class _IllustrationBookState extends State<_IllustrationBook>
       animation: _tick,
       builder: (_, _) => CustomPaint(
         painter: _BookPainter(_tick.value),
-        child:
-            const SizedBox(width: double.infinity, height: double.infinity),
+        child: const SizedBox(width: double.infinity, height: double.infinity),
       ),
     );
   }
@@ -653,9 +704,10 @@ class _BookPainter extends CustomPainter {
 
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx, cy + 10),
-          width: size.width * 0.78,
-          height: size.height * 0.65),
+        center: Offset(cx, cy + 10),
+        width: size.width * 0.78,
+        height: size.height * 0.65,
+      ),
       Paint()..color = const Color(0xFF1A6BC4).withOpacity(0.08),
     );
 
@@ -663,8 +715,7 @@ class _BookPainter extends CustomPainter {
       ..color = const Color(0xFF185FA5).withOpacity(0.18)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     final card = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-          center: Offset(cx, cy + 10), width: 200, height: 190),
+      Rect.fromCenter(center: Offset(cx, cy + 10), width: 200, height: 190),
       const Radius.circular(22),
     );
     canvas.drawRRect(card, shadow);
@@ -692,11 +743,13 @@ class _BookPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    headerText.paint(
-        canvas, Offset(cx - headerText.width / 2, cy - 73));
+    headerText.paint(canvas, Offset(cx - headerText.width / 2, cy - 73));
 
     canvas.drawCircle(
-        Offset(cx, cy - 22), 22, Paint()..color = const Color(0xFF4CAF50));
+      Offset(cx, cy - 22),
+      22,
+      Paint()..color = const Color(0xFF4CAF50),
+    );
 
     final checkPaint = Paint()
       ..color = Colors.white
@@ -716,12 +769,14 @@ class _BookPainter extends CustomPainter {
     final positions = [cy + 12, cy + 28, cy + 44, cy + 60];
     final widths = [90.0, 65.0, 80.0, 55.0];
     for (int i = 0; i < positions.length; i++) {
-      canvas.drawLine(Offset(cx - 70, positions[i]),
-          Offset(cx - 70 + widths[i], positions[i]), linePaint);
+      canvas.drawLine(
+        Offset(cx - 70, positions[i]),
+        Offset(cx - 70 + widths[i], positions[i]),
+        linePaint,
+      );
     }
 
-    final notifOffset =
-        Offset(cx + 78, cy - 80 + 4 * math.sin(t * math.pi));
+    final notifOffset = Offset(cx + 78, cy - 80 + 4 * math.sin(t * math.pi));
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: notifOffset, width: 64, height: 30),
@@ -733,14 +788,17 @@ class _BookPainter extends CustomPainter {
       text: const TextSpan(
         text: 'Ready',
         style: TextStyle(
-            fontSize: 11,
-            color: Colors.white,
-            fontWeight: FontWeight.w600),
+          fontSize: 11,
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    notifText.paint(canvas,
-        Offset(notifOffset.dx - notifText.width / 2, notifOffset.dy - 7));
+    notifText.paint(
+      canvas,
+      Offset(notifOffset.dx - notifText.width / 2, notifOffset.dy - 7),
+    );
   }
 
   @override

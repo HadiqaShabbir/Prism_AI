@@ -428,7 +428,7 @@ class _BookingScreenState extends State<BookingScreen>
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Simulating booking confirmation...',
+                      'Confirming your booking...',
                       style: TextStyle(
                         fontSize: 13,
                         color: kText,
@@ -554,33 +554,7 @@ class _BookingScreenState extends State<BookingScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFF4CAF50).withOpacity(0.2),
-              ),
-            ),
-            child: Column(
-              children: [
-                _agentLog('Booking Agent', 'Slot confirmed: $_selectedSlot'),
-                _agentLog(
-                  'Notification Agent',
-                  'Provider notified (Simulated)',
-                ),
-                _agentLog(
-                  'Reminder Agent',
-                  'Reminder scheduled for 1hr before',
-                ),
-                _agentLog(
-                  'Workflow Agent',
-                  'Status: Awaiting technician dispatch',
-                ),
-              ],
-            ),
-          ),
+
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -756,36 +730,6 @@ class _BookingScreenState extends State<BookingScreen>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _agentLog(String agent, String msg) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.check_circle_rounded,
-            color: Color(0xFF4CAF50),
-            size: 14,
-          ),
-          const SizedBox(width: 7),
-          Text(
-            '[$agent] ',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF4CAF50),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              msg,
-              style: const TextStyle(fontSize: 11, color: kText),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

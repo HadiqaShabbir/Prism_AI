@@ -12,12 +12,10 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'splash_screen.dart';
-import '../services/gemini_service.dart';
 import 'service_request_screen.dart';
 import '../services/booking_manager.dart';
-import 'agent_dashboard_screen.dart';
+import 'dispute_screen.dart';
 
 class PrismHomeScreen extends StatefulWidget {
   final String userName;
@@ -93,80 +91,6 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
       'label': 'Shifting',
       'color': Color(0xFF185FA5),
     },
-  ];
-
-  // ── AI Trace logs (static showcase) ──────────────────────────
-  final List<_TraceLog> _traceLogs = const [
-    _TraceLog(
-      agent: 'Gemini Orchestrator',
-      icon: Icons.hub_rounded,
-      color: Color(0xFF6C4FD6),
-      action: 'Request Received',
-      detail:
-          '[Gemini Orchestrator] Request received\n[Gemini Orchestrator] Analyzing intent via gemini-2.5-flash\n[Gemini Orchestrator] Routing to Language Parser Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Language Parser Agent',
-      icon: Icons.translate_rounded,
-      color: Color(0xFF00C2D4),
-      action: 'Intent Extraction',
-      detail:
-          '[Language Parser] Input classified: Roman Urdu + English mix\n[Language Parser] Confidence: 94%\n[Gemini Orchestrator] Routing to Entity Extractor Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Entity Extractor Agent',
-      icon: Icons.data_object_rounded,
-      color: Color(0xFF185FA5),
-      action: 'Field Extraction',
-      detail:
-          '[Entity Extractor] service=AC Repair\n[Entity Extractor] location=DHA → city=Karachi\n[Entity Extractor] urgency=HIGH  time=Tomorrow Morning\n[Gemini Orchestrator] Routing to Provider Discovery Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Provider Discovery Agent',
-      icon: Icons.search_rounded,
-      color: Color(0xFF185FA5),
-      action: 'Dataset Query',
-      detail:
-          '[Provider Discovery] Querying mock dataset\n[Provider Discovery] City filter: Karachi\n[Provider Discovery] Service filter: AC Repair\n[Provider Discovery] 3 providers found\n[Gemini Orchestrator] Routing to Ranking Engine Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Ranking Engine Agent',
-      icon: Icons.leaderboard_rounded,
-      color: Color(0xFFFF7043),
-      action: 'Multi-Factor Ranking',
-      detail:
-          '[Ranking Engine] Rating(25%) + Reliability(20%) + Distance(20%) + OnTime(15%) + Price(10%) + CancelRate(10%)\n[Ranking Engine] Top pick: Ali AC Services — Score: 94%\n[Ranking Engine] Reason: Highest reliability + AC specialist\n[Gemini Orchestrator] Routing to Pricing Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Pricing Engine Agent',
-      icon: Icons.price_change_rounded,
-      color: Color(0xFF66BB6A),
-      action: 'Dynamic Quote',
-      detail:
-          '[Pricing Engine] Base: Rs 1800\n[Pricing Engine] Distance(2.1km): +Rs 300\n[Pricing Engine] Urgency(High): +Rs 200\n[Pricing Engine] Loyalty: -Rs 100\n[Pricing Engine] Final: Rs 2,200\n[Gemini Orchestrator] Routing to Booking Agent',
-      timestamp: '—',
-      success: true,
-    ),
-    _TraceLog(
-      agent: 'Booking Agent',
-      icon: Icons.receipt_rounded,
-      color: Color(0xFF185FA5),
-      action: 'Confirmation Dispatch',
-      detail:
-          '[Booking Agent] Slot confirmed: Tomorrow 10:00 AM\n[Booking Agent] Booking ID: #PRZ-2024-001\n[Booking Agent] Provider notified (simulated)\n[Booking Agent] Reminder scheduled: T-60min\n[Gemini Orchestrator] Workflow complete',
-      timestamp: '—',
-      success: true,
-    ),
   ];
 
   @override
@@ -247,7 +171,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         children: [
           _buildHomeTab(),
           _buildBookingsTab(),
-          _buildAiTraceTab(),
+          _buildSupportTab(),
           _buildProfileTab(),
         ],
       ),
@@ -261,7 +185,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     final items = [
       {'icon': Icons.home_rounded, 'label': 'Home'},
       {'icon': Icons.calendar_today_rounded, 'label': 'Bookings'},
-      {'icon': Icons.psychology_rounded, 'label': 'AI Trace'},
+      {'icon': Icons.support_agent_rounded, 'label': 'Support'},
       {'icon': Icons.person_rounded, 'label': 'Profile'},
     ];
     return Container(
@@ -675,7 +599,7 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
     );
   }
 
-  // ── AI Launch Card (replaces broken Find Service box) ─────────
+  // ── Service Search Card ─────────
 
   Widget _buildAiLaunchCard() {
     return Container(
@@ -1212,114 +1136,6 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
   );
 
   // ══════════════════════════════════════════════════════════════
-  // AI TRACE TAB
-  // ══════════════════════════════════════════════════════════════
-
-  Widget _buildAiTraceTab() {
-    final hasBookings = BookingManager().allBookings.isNotEmpty;
-
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _tabHeader('AI Reasoning Trace', Icons.psychology_rounded),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kNavy, Color(0xFF1A2E50)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.hub_rounded, color: kCyan, size: 16),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Gemini Orchestrator — Multi-agent pipeline',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  AnimatedBuilder(
-                    animation: _pulseCtrl,
-                    builder: (context, child) => Icon(
-                      Icons.circle,
-                      color: kGreen.withOpacity(0.4 + 0.6 * _pulseCtrl.value),
-                      size: 8,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Active',
-                    style: TextStyle(color: kGreen, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AgentDashboardScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.dashboard_customize_rounded, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Open Agent Dashboard',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          Expanded(
-            child: hasBookings
-                ? ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _traceLogs.length,
-                    itemBuilder: (_, i) => _TraceLogCard(log: _traceLogs[i]),
-                  )
-                : _emptyState(
-                    Icons.psychology_outlined,
-                    'No trace yet',
-                    'Make a booking via AI search to see the reasoning pipeline.',
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════
   // PROFILE TAB
   // ══════════════════════════════════════════════════════════════
 
@@ -1446,6 +1262,10 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildSupportTab() {
+    return const DisputeScreen(isStandalone: true);
   }
 
   Widget _statCard(String label, String value, IconData icon, Color color) {
@@ -1575,150 +1395,6 @@ class _PrismHomeScreenState extends State<PrismHomeScreen>
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// AI TRACE LOG
-// ═══════════════════════════════════════════════════════════════
-
-class _TraceLog {
-  final String agent;
-  final IconData icon;
-  final Color color;
-  final String action;
-  final String detail;
-  final String timestamp;
-  final bool success;
-
-  const _TraceLog({
-    required this.agent,
-    required this.icon,
-    required this.color,
-    required this.action,
-    required this.detail,
-    required this.timestamp,
-    required this.success,
-  });
-}
-
-class _TraceLogCard extends StatefulWidget {
-  final _TraceLog log;
-  const _TraceLogCard({required this.log});
-
-  @override
-  State<_TraceLogCard> createState() => _TraceLogCardState();
-}
-
-class _TraceLogCardState extends State<_TraceLogCard> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final log = widget.log;
-    return GestureDetector(
-      onTap: () => setState(() => _expanded = !_expanded),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFD8E6F5)),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: log.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(log.icon, color: log.color, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        log.agent,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      Text(
-                        log.action,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF6B7A8D),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        log.success ? '✓ Done' : '● Running',
-                        style: const TextStyle(
-                          color: Color(0xFF4CAF50),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      log.timestamp,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF6B7A8D),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (_expanded) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A1628),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  log.detail,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    color: Color(0xFF8BAACC),
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

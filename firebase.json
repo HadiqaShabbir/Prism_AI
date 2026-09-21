@@ -1,0 +1,39 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "prism-ai-app-1e371",
+          "appId": "1:1024025094886:android:3c189f3eebcfa30da22927",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "prism-ai-app-1e371",
+          "configurations": {
+            "android": "1:1024025094886:android:3c189f3eebcfa30da22927",
+            "ios": "1:1024025094886:ios:5765d1eed68e9a86a22927",
+            "macos": "1:1024025094886:ios:5765d1eed68e9a86a22927",
+            "web": "1:1024025094886:web:cd5d59ad4dd69c1ea22927",
+            "windows": "1:1024025094886:web:6f930e4c5f3f0e1da22927"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

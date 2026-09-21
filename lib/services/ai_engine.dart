@@ -629,8 +629,9 @@ class AiEngine {
       'thanda',
       'gas charging',
       'split ac',
-    ]))
+    ])) {
       return 'AC Repair';
+    }
 
     if (_containsAny(lower, [
       'electric',
@@ -645,8 +646,9 @@ class AiEngine {
       'current',
       'voltage',
       'socket',
-    ]))
+    ])) {
       return 'Electrician';
+    }
 
     if (_containsAny(lower, [
       'plumb',
@@ -660,8 +662,9 @@ class AiEngine {
       'water pump',
       'nala',
       'paani',
-    ]))
+    ])) {
       return 'Plumbing';
+    }
 
     if (_containsAny(lower, [
       'beauti',
@@ -674,8 +677,9 @@ class AiEngine {
       'mehndi',
       'bridal',
       'threading',
-    ]))
+    ])) {
       return 'Beautician';
+    }
 
     if (_containsAny(lower, [
       'tutor',
@@ -693,8 +697,9 @@ class AiEngine {
       'fsc',
       'mdcat',
       'ecat',
-    ]))
+    ])) {
       return 'Tutor';
+    }
 
     if (_containsAny(lower, [
       'clean',
@@ -706,8 +711,9 @@ class AiEngine {
       'janitor',
       'jharoo',
       'ghar safai',
-    ]))
+    ])) {
       return 'Cleaning';
+    }
 
     if (_containsAny(lower, [
       'mechanic',
@@ -719,8 +725,9 @@ class AiEngine {
       'tyre',
       'oil change',
       'puncture',
-    ]))
+    ])) {
       return 'Mechanic';
+    }
 
     if (_containsAny(lower, [
       'shift',
@@ -731,8 +738,9 @@ class AiEngine {
       'truck hire',
       'samaan',
       'ghar shift',
-    ]))
+    ])) {
       return 'Shifting';
+    }
 
     return 'General Service';
   }
@@ -828,8 +836,9 @@ class AiEngine {
       'immediately',
       'foran',
       'isi waqt',
-    ]))
+    ])) {
       return 'High';
+    }
     if (time.contains('Today') || time.contains('Night')) return 'High';
     if (time.contains('Tomorrow')) return 'Medium';
     return 'Low';
@@ -846,8 +855,9 @@ class AiEngine {
       'thora',
       'kam kharch',
       'reasonable',
-    ]))
+    ])) {
       return 'Low';
+    }
     if (_containsAny(lower, [
       'best',
       'premium',
@@ -858,8 +868,9 @@ class AiEngine {
       'professional',
       'trusted',
       'reliable wala',
-    ]))
+    ])) {
       return 'High';
+    }
     return 'Medium';
   }
 

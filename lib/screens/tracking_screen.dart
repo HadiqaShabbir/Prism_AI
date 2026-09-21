@@ -38,54 +38,14 @@ class _TrackingScreenState extends State<TrackingScreen>
   late AnimationController _pulseCtrl;
 
   final List<Map<String, dynamic>> _timeline = [
-    {
-      'label': 'Request Received',
-      'time': '10:42 AM',
-      'done': true,
-      'agent': 'Intake Agent',
-    },
-    {
-      'label': 'AI Analysis Complete',
-      'time': '10:42 AM',
-      'done': true,
-      'agent': 'Intent Engine',
-    },
-    {
-      'label': 'Provider Matched',
-      'time': '10:43 AM',
-      'done': true,
-      'agent': 'Ranking Engine',
-    },
-    {
-      'label': 'Booking Confirmed',
-      'time': '10:44 AM',
-      'done': true,
-      'agent': 'Booking Agent',
-    },
-    {
-      'label': 'Technician Assigned',
-      'time': '10:45 AM',
-      'done': false,
-      'agent': 'Dispatch Agent',
-    },
-    {
-      'label': 'En Route to Location',
-      'time': 'Pending',
-      'done': false,
-      'agent': 'Navigation Agent',
-    },
-    {
-      'label': 'Service In Progress',
-      'time': 'Pending',
-      'done': false,
-      'agent': 'Service Agent',
-    },
-    {
-      'label': 'Completed',
-      'time': 'Pending',
-      'done': false,
-      'agent': 'Completion Agent',
-    },
+    {'label': 'Request Received', 'time': '10:42 AM', 'done': true},
+    {'label': 'Request Reviewed', 'time': '10:42 AM', 'done': true},
+    {'label': 'Provider Matched', 'time': '10:43 AM', 'done': true},
+    {'label': 'Booking Confirmed', 'time': '10:44 AM', 'done': true},
+    {'label': 'Technician Assigned', 'time': '10:45 AM', 'done': false},
+    {'label': 'En Route to Location', 'time': 'Pending', 'done': false},
+    {'label': 'Service In Progress', 'time': 'Pending', 'done': false},
+    {'label': 'Completed', 'time': 'Pending', 'done': false},
   ];
 
   @override
@@ -201,8 +161,6 @@ class _TrackingScreenState extends State<TrackingScreen>
             _buildProviderCard(),
             const SizedBox(height: 16),
             _buildTimelineCard(),
-            const SizedBox(height: 16),
-            _buildAgentLogCard(),
             const SizedBox(height: 16),
             if (_currentStep < _timeline.length - 1)
               SizedBox(
@@ -436,10 +394,10 @@ class _TrackingScreenState extends State<TrackingScreen>
         children: [
           const Row(
             children: [
-              Icon(Icons.account_tree_rounded, color: kPurple, size: 16),
+              Icon(Icons.timeline_rounded, color: kPurple, size: 16),
               SizedBox(width: 7),
               Text(
-                'Agentic Workflow',
+                'Service Progress',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -523,13 +481,6 @@ class _TrackingScreenState extends State<TrackingScreen>
                                   color: isDone || isCurrent ? kText : kMuted,
                                 ),
                               ),
-                              Text(
-                                step['agent'] as String,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: kMuted,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -547,46 +498,6 @@ class _TrackingScreenState extends State<TrackingScreen>
               ],
             );
           }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAgentLogCard() {
-    final doneLogs = _timeline.where((s) => s['done'] == true).toList();
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: kNavy,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Antigravity Agent Logs',
-            style: TextStyle(
-              color: kCyan,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...doneLogs.map(
-            (step) => Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Text(
-                '[${step['agent']}] ${step['label']} completed at ${step['time']}',
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 10,
-                  color: Color(0xFF8BAACC),
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

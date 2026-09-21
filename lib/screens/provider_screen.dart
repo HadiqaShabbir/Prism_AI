@@ -1,17 +1,15 @@
 // ============================================================
 // lib/screens/provider_screen.dart
-// PRISM AI — Provider Discovery Screen  v3
+// PRISM AI — Provider Discovery Screen
 //
-// Enhancements over v2:
-//  • Emergency Fast-Match mode with highlighted nearest/fastest
-//  • Confidence warning card (score < 70) with orange/yellow UI
-//  • Beautiful empty-state with retry suggestion chips
-//  • Fallback provider section when exact match unavailable
-//  • Animated multi-step AI status indicators
-//  • AI recommendation badge labels per provider
-//  • Agent Decision Trace card with full reasoning
-//  • Premium provider cards with confidence %, badges, indicators
-//  • All existing navigation/compatibility preserved
+// Features:
+//  • Emergency Fast-Match mode
+//  • Confidence warning for unclear requests
+//  • Retry suggestions when no exact match is available
+//  • Nearby provider fallback
+//  • Provider ranking based on multiple factors
+//  • Match score and recommendation badges
+//  • Provider details and booking
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -57,7 +55,6 @@ class _ProviderScreenState extends State<ProviderScreen>
   bool _loading = true;
   int _loadingStep = 0; // 0-3 animated steps
   MatchResult? _matchResult;
-  List<String> _rankingLog = [];
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -66,10 +63,10 @@ class _ProviderScreenState extends State<ProviderScreen>
 
   // Loading step labels
   static const _steps = [
-    'Querying provider database',
-    'Filtering by city & service',
-    'Applying multi-factor ranking',
-    'Evaluating availability & reliability',
+    'Finding available providers',
+    'Checking service and location',
+    'Comparing provider details',
+    'Checking availability and reliability',
   ];
 
   @override
@@ -112,29 +109,9 @@ class _ProviderScreenState extends State<ProviderScreen>
 
     final result = AiEngine.match(widget.parsedRequest);
 
-    final log = <String>[
-      '[Filter Agent] City: ${widget.parsedRequest.city} — '
-          'Service: ${widget.parsedRequest.service}',
-      '[Filter Agent] Providers found: ${result.providers.length}',
-      '[Ranking Engine] Factors: Rating(25%) Reliability(20%) Distance(20%) '
-          'OnTime(15%) Price(10%) CancelRate(10%)',
-      if (result.providers.isNotEmpty)
-        '[Ranking Engine] Top pick: ${result.providers.first.provider.name} '
-            '— Score: ${result.providers.first.matchScore}%',
-      '[Urgency Modifier] Urgency level: ${widget.parsedRequest.urgency}'
-          '${widget.parsedRequest.urgency == 'High' ? ' → Emergency fast-track active' : ''}',
-      '[Budget Filter] Budget preference: ${widget.parsedRequest.budget}',
-      '[Confidence] Score: ${widget.parsedRequest.confidenceScore}% '
-          '(${widget.parsedRequest.confidenceLevel.name.toUpperCase()})',
-      if (result.hasFallback)
-        '[Fallback Agent] No exact match — showing providers '
-            'from ${result.fallbackCity}',
-    ];
-
     if (mounted) {
       setState(() {
         _matchResult = result;
-        _rankingLog = log;
         _loading = false;
       });
       _fadeCtrl.forward();
@@ -243,7 +220,7 @@ class _ProviderScreenState extends State<ProviderScreen>
                 // Animated pulse ring
                 AnimatedBuilder(
                   animation: _pulseAnim,
-                  builder: (_, __) => Transform.scale(
+                  builder: (_, _) => Transform.scale(
                     scale: _pulseAnim.value,
                     child: Container(
                       width: 56,
@@ -264,7 +241,7 @@ class _ProviderScreenState extends State<ProviderScreen>
                 Text(
                   widget.parsedRequest.urgency == 'High'
                       ? 'Emergency Fast-Match Activated'
-                      : 'AI Orchestrating Providers…',
+                      : 'Finding the best providers…',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
@@ -273,7 +250,7 @@ class _ProviderScreenState extends State<ProviderScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Running ${_steps.length}-stage multi-agent pipeline',
+                  'Checking providers based on your request',
                   style: const TextStyle(fontSize: 12, color: kMuted),
                 ),
                 const SizedBox(height: 20),
@@ -376,7 +353,7 @@ class _ProviderScreenState extends State<ProviderScreen>
               if (result.hasProviders) ...[
                 _buildSectionHeader(
                   Icons.leaderboard_rounded,
-                  'AI-Ranked Providers',
+                  'Recommended Providers',
                   '${result.providers.length} found',
                 ),
                 const SizedBox(height: 10),
@@ -385,9 +362,6 @@ class _ProviderScreenState extends State<ProviderScreen>
 
               if (result.hasFallback && result.fallbacks.isNotEmpty)
                 _buildFallbackSection(result),
-
-              // ── Agent Decision Trace ───────────────────────
-              _buildAgentDecisionTrace(result),
               const SizedBox(height: 32),
             ],
           ],
@@ -580,7 +554,7 @@ class _ProviderScreenState extends State<ProviderScreen>
           const SizedBox(height: 8),
           Text(
             widget.parsedRequest.confidenceWarning ??
-                'AI could not fully understand your request. Results may be inaccurate.',
+                'Your request is not very clear. Results may be less accurate.',
             style: const TextStyle(
               color: Color(0xFF7B4F00),
               fontSize: 12,
@@ -758,8 +732,7 @@ class _ProviderScreenState extends State<ProviderScreen>
               icon: Icons.refresh_rounded,
               color: kCyan,
             ),
-          )
-          .toList(),
+          ),
     ];
 
     return items
@@ -866,8 +839,8 @@ class _ProviderScreenState extends State<ProviderScreen>
               const SizedBox(width: 6),
               Text(
                 isEmergency
-                    ? 'Emergency Ranking Weights'
-                    : 'AI Ranking Factors',
+                    ? 'Emergency Matching Priorities'
+                    : 'Provider Matching Factors',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1077,146 +1050,6 @@ class _ProviderScreenState extends State<ProviderScreen>
       ],
     );
   }
-
-  // ── Agent Decision Trace ──────────────────────────────────
-  Widget _buildAgentDecisionTrace(MatchResult result) {
-    final allLogs = [...widget.parsedRequest.agentLog, ..._rankingLog];
-
-    // Build natural-language decision explanation
-    String decisionText = '';
-    if (result.hasProviders) {
-      final top = result.providers.first;
-      decisionText =
-          '${top.provider.name} ranked #1 with a match score of ${top.matchScore}% '
-          'due to its combination of proximity (${top.provider.distance}), '
-          'rating (${top.provider.rating}★), and ${top.provider.reliabilityScore}% reliability. '
-          '${widget.parsedRequest.urgency == 'High' ? 'Emergency weights boosted distance and on-time factors.' : ''}'
-          '${widget.parsedRequest.budget == 'Low' ? ' Budget preference prioritised lower-priced options.' : ''}';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-
-        // Natural language decision card
-        if (decisionText.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(
-                      Icons.psychology_alt_rounded,
-                      color: kPurple,
-                      size: 16,
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'Agent Decision Reasoning',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: kText,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  decisionText,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: kMuted,
-                    height: 1.55,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Raw agent log
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: kNavy,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Agent Decision Trace',
-                    style: TextStyle(
-                      color: kCyan,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${allLogs.length} events',
-                    style: const TextStyle(color: Colors.white30, fontSize: 10),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ...allLogs.map(
-                (log) => Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 3),
-                        child: Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xFF3A5F80),
-                          size: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          log,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10,
-                            color: Color(0xFF8BAACC),
-                            height: 1.55,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1298,8 +1131,9 @@ class _RankedProviderCardState extends State<_RankedProviderCard> {
     Color borderColor = kBorder;
     if (isTop) borderColor = kBlue.withOpacity(0.4);
     if (isEmergencyHighlight) borderColor = kRed.withOpacity(0.4);
-    if (widget.isFallback)
+    if (widget.isFallback) {
       borderColor = const Color(0xFF6C4FD6).withOpacity(0.3);
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1572,7 +1406,7 @@ class _RankedProviderCardState extends State<_RankedProviderCard> {
                   ],
                 ),
 
-                // ── Expandable AI Reasons ──────────────────
+                // ── Provider Recommendation Details ──────────────────
                 if (_expanded) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -1586,7 +1420,7 @@ class _RankedProviderCardState extends State<_RankedProviderCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Agent Recommendation Reasoning',
+                          'Why this provider?',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
@@ -1699,7 +1533,7 @@ class _RankedProviderCardState extends State<_RankedProviderCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Overall AI Match Score',
+              'Overall Match Score',
               style: TextStyle(fontSize: 11, color: kMuted),
             ),
             Text(

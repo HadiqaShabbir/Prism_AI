@@ -273,7 +273,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
                   ),
                 ),
                 Text(
-                  'AI Intent Extraction',
+                  'Describe your service needs',
                   style: TextStyle(fontSize: 10, color: kMuted),
                 ),
               ],
@@ -344,7 +344,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
                     ),
                     SizedBox(width: 5),
                     Text(
-                      'AI Intent Engine',
+                      'AI-Powered Search',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -460,7 +460,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
             children: [
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, __) => Container(
+                builder: (_, _) => Container(
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
@@ -472,7 +472,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
               const SizedBox(width: 6),
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, __) => Container(
+                builder: (_, _) => Container(
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
@@ -486,7 +486,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
               const SizedBox(width: 6),
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (_, __) => Container(
+                builder: (_, _) => Container(
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
@@ -497,7 +497,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
               ),
               const SizedBox(width: 12),
               const Text(
-                'AI is analyzing your request...',
+                'Understanding your request...',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -507,10 +507,10 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _stepRow('Language Detection', true),
-          _stepRow('Intent Extraction', true),
-          _stepRow('Entity Recognition', false),
-          _stepRow('Provider Matching', false),
+          _stepRow('Understanding your request', true),
+          _stepRow('Identifying service details', true),
+          _stepRow('Checking location and time', false),
+          _stepRow('Preparing provider matches', false),
         ],
       ),
     );
@@ -523,7 +523,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
         children: [
           AnimatedBuilder(
             animation: _pulseCtrl,
-            builder: (_, __) => Icon(
+            builder: (_, _) => Icon(
               done
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_unchecked_rounded,
@@ -690,50 +690,6 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen>
                   ),
 
                   const SizedBox(height: 18),
-
-                  // Agent reasoning log
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: kNavy,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Agent Reasoning Log',
-                          style: TextStyle(
-                            color: kCyan,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (parsedRequest != null)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: parsedRequest!.agentLog
-                                .map(
-                                  (log) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      log,
-                                      style: const TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 10,
-                                        color: Color(0xFF8BAACC),
-                                        height: 1.6,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
